@@ -279,10 +279,286 @@ const BinaryCentralEngine = {
 };
 
 // ==========================================
+// 1B. ENGINE KONVERSI MULTI-BASIS UNIVERSAL
+// ==========================================
+const UniversalConversionEngine = {
+  validate(value, base) {
+    const clean = String(value).trim().toUpperCase();
+    if (!clean) return { valid: false, message: "Input tidak boleh kosong." };
+
+    switch (base) {
+      case "dec":
+        if (!/^\d+$/.test(clean))
+          return { valid: false, message: "Desimal hanya boleh berisi digit 0-9." };
+        const dNum = BigInt(clean);
+        if (dNum > 4294967295n)
+          return { valid: false, message: "Maksimal desimal adalah 4.294.967.295 (32-bit)." };
+        return { valid: true, cleanValue: clean, bigInt: dNum };
+
+      case "bin":
+        if (!/^[01]+$/.test(clean))
+          return { valid: false, message: "Biner hanya boleh berisi digit 0 dan 1." };
+        if (clean.length > 32)
+          return { valid: false, message: "Maksimal panjang biner adalah 32 bit." };
+        return { valid: true, cleanValue: clean, bigInt: BigInt("0b" + clean) };
+
+      case "oct":
+        if (!/^[0-7]+$/.test(clean))
+          return { valid: false, message: "Oktal hanya boleh berisi digit 0 sampai 7." };
+        const oDec = BigInt("0o" + clean);
+        if (oDec > 4294967295n)
+          return { valid: false, message: "Nilai oktal melebihi batas 32-bit." };
+        return { valid: true, cleanValue: clean, bigInt: oDec };
+
+      case "hex":
+        if (!/^[0-9A-F]+$/.test(clean))
+          return { valid: false, message: "Heksadesimal hanya boleh berisi digit 0-9 dan huruf A-F." };
+        const hDec = BigInt("0x" + clean);
+        if (hDec > 4294967295n)
+          return { valid: false, message: "Nilai heksadesimal melebihi batas 32-bit." };
+        return { valid: true, cleanValue: clean, bigInt: hDec };
+
+      default:
+        return { valid: false, message: "Basis bilangan tidak valid." };
+    }
+  },
+
+  getDivisionSteps(decBigInt, radix) {
+    let current = decBigInt;
+    const rBig = BigInt(radix);
+    if (current === 0n) {
+      return [
+        {
+          current: "0",
+          quotient: "0",
+          remainder: "0",
+          hexDigit: "0",
+          expression: `0 ÷ ${radix} = 0 (Sisa 0)`,
+        },
+      ];
+    }
+    const steps = [];
+    while (current > 0n) {
+      const next = current / rBig;
+      const rem = current % rBig;
+      const remNum = Number(rem);
+      let hexChar = remNum.toString(16).toUpperCase();
+      let expr = `${current} ÷ ${radix} = ${next} (Sisa ${remNum})`;
+      if (radix === 16 && remNum >= 10) {
+        expr += ` &rarr; Simbol Heksa: <strong>${hexChar}</strong>`;
+      }
+      steps.push({
+        current: current.toString(),
+        quotient: next.toString(),
+        remainder: remNum.toString(),
+        hexDigit: hexChar,
+        expression: expr,
+      });
+      current = next;
+    }
+    return steps;
+  },
+
+  getWeightSteps(cleanStr, radix) {
+    const chars = cleanStr.split("").reverse();
+    const terms = [];
+    let sum = 0n;
+    const rBig = BigInt(radix);
+
+    chars.forEach((char, power) => {
+      let digitVal = radix === 16 ? parseInt(char, 16) : parseInt(char, radix);
+      let weight = rBig ** BigInt(power);
+      let termVal = BigInt(digitVal) * weight;
+      sum += termVal;
+      let formula = `${char} × ${radix}<sup>${power}</sup>`;
+      if (radix === 16 && digitVal >= 10) {
+        formula = `${char} (${digitVal}) × ${radix}<sup>${power}</sup>`;
+      }
+      terms.push({
+        char,
+        digitVal,
+        power,
+        weight: weight.toString(),
+        termVal: termVal.toString(),
+        formula: `${formula} = ${digitVal} × ${weight} = <strong>${termVal}</strong>`,
+      });
+    });
+
+    return {
+      terms: terms.reverse(),
+      sum: sum.toString(),
+      sumFormula:
+        terms.map((t) => t.termVal).join(" + ") + ` = <strong>${sum}</strong>`,
+    };
+  },
+
+  getExpansionSteps(cleanStr, fromBase) {
+    const bitsPerDigit = fromBase === "oct" ? 3 : 4;
+    const chars = cleanStr.split("");
+    const mappings = [];
+    chars.forEach((char) => {
+      const val = parseInt(char, fromBase === "oct" ? 8 : 16);
+      const bin = val.toString(2).padStart(bitsPerDigit, "0");
+      mappings.push({
+        digit: char,
+        val,
+        bin,
+      });
+    });
+    const combinedBin =
+      mappings.map((m) => m.bin).join("").replace(/^0+(?=\d)/, "") || "0";
+    return {
+      bitsPerDigit,
+      mappings,
+      combinedBin,
+    };
+  },
+
+  getGroupingSteps(binStr, toBase) {
+    const cleanBin = binStr.replace(/^0+(?=\d)/, "") || "0";
+    const groupLen = toBase === "oct" ? 3 : 4;
+    const rem = cleanBin.length % groupLen;
+    const padNeeded = rem === 0 ? 0 : groupLen - rem;
+    const padded = cleanBin.padStart(cleanBin.length + padNeeded, "0");
+    const groups = [];
+    let result = "";
+
+    for (let i = 0; i < padded.length; i += groupLen) {
+      const chunk = padded.slice(i, i + groupLen);
+      const val = parseInt(chunk, 2);
+      const char =
+        toBase === "oct" ? val.toString(8) : val.toString(16).toUpperCase();
+      result += char;
+
+      const weights = toBase === "oct" ? [4, 2, 1] : [8, 4, 2, 1];
+      const calc =
+        chunk
+          .split("")
+          .map((b, idx) => `${b}×${weights[idx]}`)
+          .join(" + ") + ` = ${val}`;
+
+      groups.push({
+        chunk,
+        val,
+        char,
+        calc,
+      });
+    }
+
+    return {
+      groupLen,
+      cleanBin,
+      padded,
+      padNeeded,
+      groups,
+      result: result.replace(/^0+(?=[1-9A-F])/i, "") || "0",
+    };
+  },
+
+  convertAll(value, fromBase) {
+    const valRes = this.validate(value, fromBase);
+    if (!valRes.valid) return { success: false, error: valRes.message };
+
+    const decBig = valRes.bigInt;
+    const decStr = decBig.toString();
+    const binStr = decBig.toString(2);
+    const octStr = decBig.toString(8);
+    const hexStr = decBig.toString(16).toUpperCase();
+
+    const results = {
+      success: true,
+      fromBase,
+      inputValue: valRes.cleanValue,
+      dec: decStr,
+      bin: binStr,
+      oct: octStr,
+      hex: hexStr,
+      steps: {},
+    };
+
+    if (fromBase === "dec") {
+      results.steps.toBin = {
+        title: "Desimal ke Biner (Metode Pembagian Bertingkat dengan 2)",
+        radix: 2,
+        rows: this.getDivisionSteps(decBig, 2),
+        result: binStr,
+      };
+      results.steps.toOct = {
+        title: "Desimal ke Oktal (Metode Pembagian Bertingkat dengan 8)",
+        radix: 8,
+        rows: this.getDivisionSteps(decBig, 8),
+        result: octStr,
+        altBinary: this.getGroupingSteps(binStr, "oct"),
+      };
+      results.steps.toHex = {
+        title: "Desimal ke Heksadesimal (Metode Pembagian Bertingkat dengan 16)",
+        radix: 16,
+        rows: this.getDivisionSteps(decBig, 16),
+        result: hexStr,
+        altBinary: this.getGroupingSteps(binStr, "hex"),
+      };
+    } else if (fromBase === "bin") {
+      results.steps.toDec = {
+        title: "Biner ke Desimal (Metode Pembobotan Posisi Pangkat 2)",
+        weightData: this.getWeightSteps(valRes.cleanValue, 2),
+        result: decStr,
+      };
+      results.steps.toOct = {
+        title: "Biner ke Oktal (Pengelompokan 3-Bit dari Kanan)",
+        groupData: this.getGroupingSteps(valRes.cleanValue, "oct"),
+        result: octStr,
+      };
+      results.steps.toHex = {
+        title: "Biner ke Heksadesimal (Pengelompokan 4-Bit dari Kanan)",
+        groupData: this.getGroupingSteps(valRes.cleanValue, "hex"),
+        result: hexStr,
+      };
+    } else if (fromBase === "oct") {
+      results.steps.toBin = {
+        title: "Oktal ke Biner (Ekspansi 3-Bit per Digit)",
+        expansionData: this.getExpansionSteps(valRes.cleanValue, "oct"),
+        result: binStr,
+      };
+      results.steps.toDec = {
+        title: "Oktal ke Desimal (Metode Pembobotan Posisi Pangkat 8)",
+        weightData: this.getWeightSteps(valRes.cleanValue, 8),
+        result: decStr,
+      };
+      results.steps.toHex = {
+        title: "Oktal ke Heksadesimal (Jembatan Biner: 3-Bit &rarr; 4-Bit)",
+        stepA: this.getExpansionSteps(valRes.cleanValue, "oct"),
+        stepB: this.getGroupingSteps(binStr, "hex"),
+        result: hexStr,
+      };
+    } else if (fromBase === "hex") {
+      results.steps.toBin = {
+        title: "Heksadesimal ke Biner (Ekspansi 4-Bit per Digit)",
+        expansionData: this.getExpansionSteps(valRes.cleanValue, "hex"),
+        result: binStr,
+      };
+      results.steps.toDec = {
+        title: "Heksadesimal ke Desimal (Metode Pembobotan Posisi Pangkat 16)",
+        weightData: this.getWeightSteps(valRes.cleanValue, 16),
+        result: decStr,
+      };
+      results.steps.toOct = {
+        title: "Heksadesimal ke Oktal (Jembatan Biner: 4-Bit &rarr; 3-Bit)",
+        stepA: this.getExpansionSteps(valRes.cleanValue, "hex"),
+        stepB: this.getGroupingSteps(binStr, "oct"),
+        result: octStr,
+      };
+    }
+
+    return results;
+  },
+};
+
+// ==========================================
 // 2. KONTROLER SUBMENU MINGGU 1
 // ==========================================
 const Week1Controller = {
   activeSubmenu: "w1-konsep",
+  universalMode: "dec",
   currentSwitchBits: [0, 0, 1, 0, 1, 0, 1, 0], // Default 8-bit = 42
   quizState: {
     question: null,
@@ -305,6 +581,9 @@ const Week1Controller = {
     switch (this.activeSubmenu) {
       case "w1-konsep":
         contentHtml = this.getConceptTemplate();
+        break;
+      case "w1-universal":
+        contentHtml = this.getUniversalConverterTemplate();
         break;
       case "w1-simulator":
         contentHtml = this.getSimulatorTemplate();
@@ -510,6 +789,496 @@ const Week1Controller = {
       `;
     }
     return rows;
+  },
+
+  // -------------------------------------------------------------
+  // TEMPLATE SUBMENU: KONVERSI SEMUA BILANGAN (MULTI-BASIS)
+  // -------------------------------------------------------------
+  getUniversalConverterTemplate() {
+    return `
+      <div class="topic-content animate-fade-in">
+        <div class="topic-header">
+          <div class="topic-meta">
+            <span class="badge badge-accent"><i class="fas fa-arrows-rotate"></i> Konverter Lengkap</span>
+            <span class="badge badge-outline">Multi-Basis Universal</span>
+          </div>
+          <h2 class="topic-title">Konversi Semua Basis Bilangan</h2>
+          <p class="topic-subtitle">
+            Konversikan bilangan secara bebas antara <strong>Desimal</strong>, <strong>Biner</strong>, <strong>Oktal</strong>, dan <strong>Heksadesimal</strong> dengan penjabaran langkah matematis serta simulator sinkronisasi 4 basis secara <em>real-time</em>.
+          </p>
+        </div>
+
+        <!-- Mode Selector Tabs -->
+        <div class="card universal-mode-card">
+          <div class="universal-tabs-wrapper">
+            <div class="universal-tabs" id="univ-mode-tabs">
+              <button type="button" class="univ-tab-btn ${this.universalMode === "dec" ? "active" : ""}" data-mode="dec">
+                <span class="tab-radix radix-dec">r=10</span>
+                <span><i class="fas fa-hashtag"></i> Desimal &rarr; Semua</span>
+              </button>
+              <button type="button" class="univ-tab-btn ${this.universalMode === "bin" ? "active" : ""}" data-mode="bin">
+                <span class="tab-radix radix-bin">r=2</span>
+                <span><i class="fas fa-code"></i> Biner &rarr; Semua</span>
+              </button>
+              <button type="button" class="univ-tab-btn ${this.universalMode === "oct" ? "active" : ""}" data-mode="oct">
+                <span class="tab-radix radix-oct">r=8</span>
+                <span><i class="fas fa-layer-group"></i> Oktal &rarr; Semua</span>
+              </button>
+              <button type="button" class="univ-tab-btn ${this.universalMode === "hex" ? "active" : ""}" data-mode="hex">
+                <span class="tab-radix radix-hex">r=16</span>
+                <span><i class="fas fa-cube"></i> Heksadesimal &rarr; Semua</span>
+              </button>
+              <button type="button" class="univ-tab-btn tab-highlight ${this.universalMode === "sync" ? "active" : ""}" data-mode="sync">
+                <span class="tab-radix radix-sync"><i class="fas fa-bolt"></i></span>
+                <span>Sinkronisasi 4 Basis (Live)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Container Mode Single Base (Dec / Bin / Oct / Hex) -->
+        <div id="univ-single-base-panel" class="${this.universalMode === "sync" ? "hidden" : ""}">
+          <div class="card univ-input-card mt-3">
+            <div class="univ-input-header">
+              <div class="univ-input-title-wrap">
+                <span class="badge" id="univ-active-badge">Basis Desimal (10)</span>
+                <h3 id="univ-input-heading" class="mt-1">Masukkan Bilangan Desimal</h3>
+              </div>
+              <div class="univ-input-limits">
+                <small class="text-muted" id="univ-valid-chars">Karakter valid: <code>0-9</code></small>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <div class="input-action-wrapper">
+                <input
+                  type="text"
+                  id="univ-input-val"
+                  class="text-input font-mono univ-main-input"
+                  value="42"
+                  placeholder="Ketik nilai..."
+                  autocomplete="off"
+                  spellcheck="false"
+                >
+                <button type="button" id="btn-run-univ" class="btn btn-primary">
+                  <i class="fas fa-calculator"></i> Hitung Konversi
+                </button>
+                <button type="button" id="btn-clear-univ" class="btn btn-outline" title="Kosongkan">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div id="univ-input-error" class="input-error-msg hidden"></div>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="preset-row mt-2" id="univ-preset-container">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Dynamic Output Results -->
+          <div id="univ-results-area" class="mt-4">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Container Mode Live 4-Way Sync -->
+        <div id="univ-sync-panel" class="${this.universalMode === "sync" ? "" : "hidden"}">
+          <div class="card sync-intro-card mt-3">
+            <div class="sync-intro-header">
+              <div>
+                <span class="badge badge-accent"><i class="fas fa-bolt"></i> Real-Time Bidirectional</span>
+                <h3 class="card-title mt-1">Matriks Sinkronisasi 4 Basis Bilangan</h3>
+                <p class="card-desc">Ketik angka pada <strong>salah satu</strong> kotak input di bawah. Ketiga kotak lainnya akan otomatis terhitung dan diperbarui secara instan!</p>
+              </div>
+              <div class="sync-actions-top">
+                <button type="button" id="btn-sync-rand" class="btn btn-sm btn-outline"><i class="fas fa-dice"></i> Nilai Acak</button>
+                <button type="button" id="btn-sync-reset" class="btn btn-sm btn-outline"><i class="fas fa-undo"></i> Reset Semua</button>
+              </div>
+            </div>
+
+            <!-- 4 Grid Cards -->
+            <div class="grid-2-cols sync-boxes-grid mt-4">
+              <!-- Desimal -->
+              <div class="sync-box sync-box-dec" id="sync-card-dec">
+                <div class="sync-box-header">
+                  <div class="sync-box-info">
+                    <span class="radix-pill radix-dec">r = 10</span>
+                    <strong>DESIMAL</strong>
+                  </div>
+                  <button type="button" class="btn-copy-chip" data-target="sync-input-dec" title="Salin Desimal">
+                    <i class="fas fa-copy"></i> Salin
+                  </button>
+                </div>
+                <div class="sync-input-wrap">
+                  <input type="text" id="sync-input-dec" class="sync-field font-mono" value="42" placeholder="0-9" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="sync-box-footer">
+                  <small class="text-muted">Simbol: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9</small>
+                </div>
+              </div>
+
+              <!-- Biner -->
+              <div class="sync-box sync-box-bin" id="sync-card-bin">
+                <div class="sync-box-header">
+                  <div class="sync-box-info">
+                    <span class="radix-pill radix-bin">r = 2</span>
+                    <strong>BINER</strong>
+                  </div>
+                  <button type="button" class="btn-copy-chip" data-target="sync-input-bin" title="Salin Biner">
+                    <i class="fas fa-copy"></i> Salin
+                  </button>
+                </div>
+                <div class="sync-input-wrap">
+                  <input type="text" id="sync-input-bin" class="sync-field font-mono" value="101010" placeholder="0 atau 1" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="sync-box-footer">
+                  <small class="text-muted">Awalan Bahasa Pemrograman: <code class="code-prefix">0b101010</code></small>
+                </div>
+              </div>
+
+              <!-- Oktal -->
+              <div class="sync-box sync-box-oct" id="sync-card-oct">
+                <div class="sync-box-header">
+                  <div class="sync-box-info">
+                    <span class="radix-pill radix-oct">r = 8</span>
+                    <strong>OKTAL</strong>
+                  </div>
+                  <button type="button" class="btn-copy-chip" data-target="sync-input-oct" title="Salin Oktal">
+                    <i class="fas fa-copy"></i> Salin
+                  </button>
+                </div>
+                <div class="sync-input-wrap">
+                  <input type="text" id="sync-input-oct" class="sync-field font-mono" value="52" placeholder="0-7" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="sync-box-footer">
+                  <small class="text-muted">Simbol: 0 sampai 7 | Awalan: <code class="code-prefix">0o52</code></small>
+                </div>
+              </div>
+
+              <!-- Heksadesimal -->
+              <div class="sync-box sync-box-hex" id="sync-card-hex">
+                <div class="sync-box-header">
+                  <div class="sync-box-info">
+                    <span class="radix-pill radix-hex">r = 16</span>
+                    <strong>HEKSADESIMAL</strong>
+                  </div>
+                  <button type="button" class="btn-copy-chip" data-target="sync-input-hex" title="Salin Heksa">
+                    <i class="fas fa-copy"></i> Salin
+                  </button>
+                </div>
+                <div class="sync-input-wrap">
+                  <input type="text" id="sync-input-hex" class="sync-field font-mono" value="2A" placeholder="0-9, A-F" autocomplete="off" spellcheck="false">
+                </div>
+                <div class="sync-box-footer">
+                  <small class="text-muted">A=10, B=11, C=12, D=13, E=14, F=15 | <code class="code-prefix">0x2A</code></small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Telemetry Bar -->
+            <div class="sync-telemetry card mt-4">
+              <div class="sync-tele-header">
+                <span class="tele-title"><i class="fas fa-microchip"></i> Telemetri Representasi Memori Digital</span>
+                <span class="badge badge-info" id="tele-bits-badge">6 Bit • 1 Byte</span>
+              </div>
+              <div class="tele-bits-display mt-2" id="sync-tele-bits">
+                <!-- Bit visualizer pills -->
+              </div>
+              <div class="sync-presets-quick mt-3">
+                <span class="preset-label">Contoh Cepat:</span>
+                <button type="button" class="btn-chip sync-preset-btn" data-val="15">15 (Nibble Maks)</button>
+                <button type="button" class="btn-chip sync-preset-btn" data-val="42">42 (Standar)</button>
+                <button type="button" class="btn-chip sync-preset-btn" data-val="127">127 (7-Bit ASCII)</button>
+                <button type="button" class="btn-chip sync-preset-btn" data-val="255">255 (1 Byte Maks)</button>
+                <button type="button" class="btn-chip sync-preset-btn" data-val="1024">1024 (1 KiB)</button>
+                <button type="button" class="btn-chip sync-preset-btn" data-val="4095">4095 (12-Bit / 0xFFF)</button>
+                <button type="button" class="btn-chip sync-preset-btn" data-val="65535">65535 (2 Byte Maks)</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderUniversalResults(results, fromBase) {
+    const baseMeta = {
+      dec: { name: "Desimal", radix: 10, symbol: "₁₀", color: "text-sky", badgeClass: "badge-dec", note: "Basis 10 (Sistem Manusia)" },
+      bin: { name: "Biner", radix: 2, symbol: "₂", color: "text-cyan", badgeClass: "badge-bin", note: "Basis 2 (Sirkuit Digital)" },
+      oct: { name: "Oktal", radix: 8, symbol: "₈", color: "text-amber", badgeClass: "badge-oct", note: "Basis 8 (Kelompok 3-Bit)" },
+      hex: { name: "Heksadesimal", radix: 16, symbol: "₁₆", color: "text-magenta", badgeClass: "badge-hex", note: "Basis 16 (Kelompok 4-Bit)" },
+    };
+
+    const targetBases = ["dec", "bin", "oct", "hex"].filter((b) => b !== fromBase);
+
+    // 1. Kartu Ringkasan Hasil (3 Target Cards)
+    const cardsHtml = targetBases
+      .map((tBase) => {
+        const meta = baseMeta[tBase];
+        const val = results[tBase];
+        return `
+        <div class="card conv-result-card card-${tBase} animate-slide-up">
+          <div class="conv-card-header">
+            <span class="badge ${meta.badgeClass}"><i class="fas fa-arrow-right"></i> Ke ${meta.name}</span>
+            <span class="radix-pill radix-${tBase}">r = ${meta.radix}</span>
+          </div>
+          <div class="conv-card-body mt-2">
+            <div class="final-result-box">
+              <span class="final-label">Nilai Ekuivalen:</span>
+              <span class="final-value ${meta.color} font-mono">${val}<sub>${meta.radix}</sub></span>
+            </div>
+            <p class="conv-desc mt-2"><small class="text-muted">${meta.note}</small></p>
+          </div>
+          <div class="conv-card-footer mt-3">
+            <button type="button" class="btn btn-sm btn-outline btn-copy-univ w-100" data-copy-text="${val}">
+              <i class="fas fa-copy"></i> Salin ${meta.name}
+            </button>
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    // 2. Rincian Langkah Matematis per Target Base
+    const stepKeys = {
+      dec: ["toBin", "toOct", "toHex"],
+      bin: ["toDec", "toOct", "toHex"],
+      oct: ["toBin", "toDec", "toHex"],
+      hex: ["toBin", "toDec", "toOct"],
+    };
+
+    const stepsHtml = stepKeys[fromBase]
+      .map((k) => {
+        const step = results.steps[k];
+        if (!step) return "";
+        const targetBaseKey = k.replace("to", "").toLowerCase();
+        const tMeta = baseMeta[targetBaseKey];
+
+        let detailHtml = "";
+        if (step.method === "division") {
+          detailHtml = this.renderDivisionTable(step.rows, step.radix, step.result);
+          if (step.altBinary) {
+            detailHtml += `
+            <div class="alt-method-box mt-4">
+              <div class="alt-method-header">
+                <span class="badge badge-info"><i class="fas fa-code-branch"></i> Cara Alternatif: Melalui Pengelompokan Biner</span>
+              </div>
+              <p class="text-muted mt-1"><small>Desimal &rarr; Biner &rarr; ${tMeta.name}:</small></p>
+              ${this.renderGroupingGrid(step.altBinary, targetBaseKey, step.result)}
+            </div>
+          `;
+          }
+        } else if (step.method === "weight") {
+          detailHtml = this.renderWeightTable(step.weightData, step.radix, step.result);
+        } else if (step.method === "expansion") {
+          detailHtml = this.renderExpansionGrid(step.expansionData, step.expansionData.bitsPerDigit, step.result);
+        } else if (step.method === "grouping") {
+          detailHtml = this.renderGroupingGrid(step.groupData, targetBaseKey, step.result);
+        } else if (step.method === "bridge") {
+          detailHtml = this.renderBridgeSteps(step.stepA, step.stepB, step.result, fromBase, targetBaseKey);
+        }
+
+        return `
+        <div class="card derivation-card mb-4 animate-slide-up">
+          <div class="derivation-header">
+            <div class="derivation-title-wrap">
+              <span class="badge ${tMeta.badgeClass}"><i class="fas fa-calculator"></i> Konversi ke ${tMeta.name}</span>
+              <h4 class="derivation-title mt-1">${step.title}</h4>
+            </div>
+            <div class="derivation-result-pill">
+              Hasil: <strong class="font-mono ${tMeta.color}">${step.result}<sub>${tMeta.radix}</sub></strong>
+            </div>
+          </div>
+          <div class="derivation-body mt-3">
+            ${detailHtml}
+          </div>
+        </div>
+      `;
+      })
+      .join("");
+
+    return `
+      <!-- Ringkasan Kartu 3 Basis Tujuan -->
+      <div class="card mb-4">
+        <div class="card-header-flex">
+          <div>
+            <h3 class="card-title"><i class="fas fa-layer-group"></i> Hasil Konversi Semua Basis</h3>
+            <p class="card-desc">Nilai input <strong class="font-mono text-cyan">${results.inputValue}<sub>${baseMeta[fromBase].radix}</sub></strong> (${baseMeta[fromBase].name}) dalam 3 sistem bilangan lainnya:</p>
+          </div>
+          <span class="badge badge-accent">Selesai Dihitung</span>
+        </div>
+
+        <div class="grid-3-cards mt-3">
+          ${cardsHtml}
+        </div>
+      </div>
+
+      <!-- Langkah Matematis Lengkap -->
+      <div class="derivation-section mt-4">
+        <div class="section-header-wrap mb-3">
+          <h3 class="section-title"><i class="fas fa-list-check"></i> Langkah & Pembuktian Matematis Detail</h3>
+          <p class="section-desc text-muted">Pelajari metode konversi langkah-demi-langkah dari ${baseMeta[fromBase].name} ke masing-masing sistem basis:</p>
+        </div>
+
+        ${stepsHtml}
+      </div>
+    `;
+  },
+
+  renderDivisionTable(rows, radix, targetResult) {
+    return `
+      <div class="table-responsive mt-2">
+        <table class="division-table">
+          <thead>
+            <tr>
+              <th>Operasi Pembagian</th>
+              <th>Hasil Bagi</th>
+              <th>Sisa Bagi</th>
+              <th>Digit Ekuivalen</th>
+              <th>Urutan Digit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map(
+                (r, i) => `
+              <tr>
+                <td><code>${r.current} ÷ ${radix}</code></td>
+                <td><strong>${r.quotient}</strong></td>
+                <td><span class="badge ${r.remainder !== "0" ? "badge-accent" : "badge-dim"}">${r.remainder}</span></td>
+                <td><strong class="font-mono text-cyan">${r.hexDigit}</strong></td>
+                <td><small class="text-muted">${i === rows.length - 1 ? "↑ MSB (Paling Kiri)" : i === 0 ? "LSB (Paling Kanan)" : "↑"}</small></td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="result-highlight-pill mt-3">
+        <i class="fas fa-arrow-up text-cyan"></i> Baca digit dari <strong>bawah (MSB) ke atas (LSB)</strong>:
+        <strong class="font-mono text-cyan ms-1">${targetResult}</strong><sub>${radix}</sub>
+      </div>
+    `;
+  },
+
+  renderWeightTable(weightData, radix, targetResult) {
+    return `
+      <div class="table-responsive mt-2">
+        <table class="division-table">
+          <thead>
+            <tr>
+              <th>Digit Asal (d)</th>
+              <th>Posisi (n)</th>
+              <th>Bobot Posisi (${radix}ⁿ)</th>
+              <th>Perhitungan Suku (d × ${radix}ⁿ)</th>
+              <th>Nilai Suku</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${weightData.terms
+              .map(
+                (t) => `
+              <tr>
+                <td><strong class="font-mono text-cyan">${t.char}${radix === 16 && t.digitVal >= 10 ? ` <small class="text-muted">(${t.digitVal})</small>` : ""}</strong></td>
+                <td><span class="badge badge-dim">${t.power}</span></td>
+                <td><code>${radix}<sup>${t.power}</sup> = ${t.weight}</code></td>
+                <td>${t.formula}</td>
+                <td><strong>${t.termVal}</strong></td>
+              </tr>
+            `,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="result-highlight-pill mt-3">
+        <strong>Jumlahkan Seluruh Nilai Suku:</strong><br>
+        <span class="font-mono">${weightData.sumFormula}</span><sub>10</sub>
+      </div>
+    `;
+  },
+
+  renderExpansionGrid(expansionData, bitsPerDigit, targetResult) {
+    return `
+      <p class="step-note mt-2">
+        Karena ${bitsPerDigit === 3 ? "8 = 2³" : "16 = 2⁴"}, setiap 1 digit asal langsung diekspansikan menjadi <strong>${bitsPerDigit} digit biner</strong>:
+      </p>
+      <div class="expansion-grid mt-3">
+        ${expansionData.mappings
+          .map(
+            (m) => `
+          <div class="expansion-card ${bitsPerDigit === 3 ? "exp-oct" : "exp-hex"}">
+            <div class="exp-src">${m.digit}<sub>${bitsPerDigit === 3 ? "8" : "16"}</sub></div>
+            <div class="exp-arrow"><i class="fas fa-arrow-down"></i></div>
+            <div class="exp-target font-mono">${m.bin}₂</div>
+            <small class="exp-desc">${bitsPerDigit === 3 ? `(Bobot 4-2-1: ${m.val})` : `(${m.digit} = ${m.val}₁₀)`}</small>
+          </div>
+        `,
+          )
+          .join("")}
+      </div>
+      <div class="result-highlight-pill mt-3">
+        Gabungkan semua bit dari kiri ke kanan: <strong class="font-mono text-cyan">${targetResult}</strong>₂
+      </div>
+    `;
+  },
+
+  renderGroupingGrid(groupData, toBase, targetResult) {
+    const isOct = toBase === "oct";
+    const radix = isOct ? 8 : 16;
+    return `
+      <p class="conv-desc mt-2">
+        Biner dikelompokkan per <strong>${groupData.groupLen} bit</strong> mulai dari <em>kanan ke kiri</em>.
+        ${groupData.padNeeded > 0 ? `<br><span class="text-warning"><i class="fas fa-info-circle"></i> Ditambahkan <strong>${groupData.padNeeded} bit nol (leading zero)</strong> di paling kiri agar kelompok bit lengkap.</span>` : ""}
+      </p>
+      <div class="grouping-boxes mt-3">
+        ${groupData.groups
+          .map(
+            (g) => `
+          <div class="group-box ${isOct ? "group-oct" : "group-hex"}">
+            <div class="group-binary font-mono">${g.chunk}</div>
+            <div class="group-weights">${isOct ? "4 2 1" : "8 4 2 1"}</div>
+            <div class="group-calc"><small>${g.calc}</small></div>
+            <div class="group-result-digit font-mono">${g.char}</div>
+          </div>
+        `,
+          )
+          .join("")}
+      </div>
+      <div class="result-highlight-pill mt-3">
+        Gabungkan digit hasil: <strong class="font-mono ${isOct ? "text-amber" : "text-magenta"}">${targetResult}</strong><sub>${radix}</sub>
+      </div>
+    `;
+  },
+
+  renderBridgeSteps(stepA, stepB, targetResult, fromBase, toBase) {
+    const fromRadix = fromBase === "oct" ? 8 : 16;
+    const toRadix = toBase === "hex" ? 16 : 8;
+    return `
+      <div class="bridge-flow mt-2">
+        <div class="sub-stage-box mb-3">
+          <div class="sub-stage-header">
+            <span class="badge badge-accent">Tahap 1</span>
+            <strong>Ekspansi Digit Asal (${fromRadix}) ke Biner</strong>
+          </div>
+          ${this.renderExpansionGrid(stepA, stepA.bitsPerDigit, stepA.combinedBin)}
+        </div>
+
+        <div class="bridge-arrow-wrap text-center my-3">
+          <span class="badge badge-info"><i class="fas fa-exchange-alt"></i> Jembatan Biner Sentral: <code class="font-mono text-cyan">${stepA.combinedBin}₂</code></span>
+        </div>
+
+        <div class="sub-stage-box mt-3">
+          <div class="sub-stage-header">
+            <span class="badge badge-accent">Tahap 2</span>
+            <strong>Kelompokkan Ulang Bit Biner ke Basis Tujuan (${toRadix})</strong>
+          </div>
+          ${this.renderGroupingGrid(stepB, toBase, targetResult)}
+        </div>
+      </div>
+    `;
   },
 
   // -------------------------------------------------------------
@@ -770,7 +1539,9 @@ const Week1Controller = {
   // 3. EVENT LISTENERS & WIDGET LOGIC
   // ==========================================
   attachEvents() {
-    if (this.activeSubmenu === "w1-simulator") {
+    if (this.activeSubmenu === "w1-universal") {
+      this.initUniversalConverter();
+    } else if (this.activeSubmenu === "w1-simulator") {
       this.initSimulator();
     } else if (this.activeSubmenu === "w1-visualizer") {
       this.initVisualizer();
@@ -779,6 +1550,335 @@ const Week1Controller = {
     } else if (this.activeSubmenu === "w1-kuis") {
       this.initQuiz();
     }
+  },
+
+  // ------------------------------------------
+  // LOGIKA KONVERTER MULTI-BASIS UNIVERSAL
+  // ------------------------------------------
+  initUniversalConverter() {
+    let activeMode = this.universalMode || "dec";
+    const modeTabs = document.querySelectorAll("#univ-mode-tabs .univ-tab-btn");
+    const singlePanel = document.getElementById("univ-single-base-panel");
+    const syncPanel = document.getElementById("univ-sync-panel");
+    const inputVal = document.getElementById("univ-input-val");
+    const inputHeading = document.getElementById("univ-input-heading");
+    const activeBadge = document.getElementById("univ-active-badge");
+    const validChars = document.getElementById("univ-valid-chars");
+    const errorEl = document.getElementById("univ-input-error");
+    const runBtn = document.getElementById("btn-run-univ");
+    const clearBtn = document.getElementById("btn-clear-univ");
+    const resultsArea = document.getElementById("univ-results-area");
+    const presetContainer = document.getElementById("univ-preset-container");
+
+    const modeConfig = {
+      dec: {
+        name: "Desimal",
+        radix: "10",
+        heading: "Masukkan Bilangan Desimal (Basis 10):",
+        chars: "Karakter valid: <code>0-9</code> (0 sampai 4.294.967.295)",
+        placeholder: "Contoh: 42, 255, 1024",
+        defaultVal: "42",
+        presets: ["42", "75", "125", "255", "1024", "4095"],
+      },
+      bin: {
+        name: "Biner",
+        radix: "2",
+        heading: "Masukkan Deretan Bit Biner (Basis 2):",
+        chars: "Karakter valid: <code>0</code> dan <code>1</code> (Maks 32-bit)",
+        placeholder: "Contoh: 101010, 11111111",
+        defaultVal: "101010",
+        presets: ["101010", "111101", "11111111", "100000000", "11010110"],
+      },
+      oct: {
+        name: "Oktal",
+        radix: "8",
+        heading: "Masukkan Bilangan Oktal (Basis 8):",
+        chars: "Karakter valid: <code>0-7</code> (Digit 8 & 9 tidak diperbolehkan)",
+        placeholder: "Contoh: 52, 77, 377",
+        defaultVal: "52",
+        presets: ["52", "75", "175", "377", "2000", "7777"],
+      },
+      hex: {
+        name: "Heksadesimal",
+        radix: "16",
+        heading: "Masukkan Bilangan Heksadesimal (Basis 16):",
+        chars: "Karakter valid: <code>0-9</code> dan <code>A-F</code> (Huruf kapital/kecil)",
+        placeholder: "Contoh: 2A, FF, 1A3",
+        defaultVal: "2A",
+        presets: ["2A", "4B", "7F", "FF", "1A3", "3E8", "FFFF"],
+      },
+    };
+
+    const renderPresets = (mode) => {
+      if (!presetContainer || mode === "sync") return;
+      const cfg = modeConfig[mode];
+      presetContainer.innerHTML = `
+        <span class="preset-label">Contoh Cepat:</span>
+        ${cfg.presets
+          .map(
+            (p) => `
+          <button type="button" class="btn-chip univ-preset-btn" data-val="${p}">${p}</button>
+        `,
+          )
+          .join("")}
+      `;
+      presetContainer.querySelectorAll(".univ-preset-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          inputVal.value = btn.dataset.val;
+          executeCalculation();
+        });
+      });
+    };
+
+    const switchMode = (mode) => {
+      activeMode = mode;
+      this.universalMode = mode;
+      modeTabs.forEach((tab) =>
+        tab.classList.toggle("active", tab.dataset.mode === mode),
+      );
+
+      if (mode === "sync") {
+        if (singlePanel) singlePanel.classList.add("hidden");
+        if (syncPanel) syncPanel.classList.remove("hidden");
+        this.initSyncGrid();
+      } else {
+        if (syncPanel) syncPanel.classList.add("hidden");
+        if (singlePanel) singlePanel.classList.remove("hidden");
+        const cfg = modeConfig[mode];
+        if (activeBadge) activeBadge.textContent = `Basis ${cfg.name} (${cfg.radix})`;
+        if (inputHeading) inputHeading.textContent = cfg.heading;
+        if (validChars) validChars.innerHTML = cfg.chars;
+        if (inputVal) {
+          inputVal.placeholder = cfg.placeholder;
+          inputVal.value = cfg.defaultVal;
+        }
+        if (errorEl) errorEl.classList.add("hidden");
+        renderPresets(mode);
+        executeCalculation();
+      }
+    };
+
+    modeTabs.forEach((tab) => {
+      tab.addEventListener("click", () => switchMode(tab.dataset.mode));
+    });
+
+    const executeCalculation = () => {
+      if (activeMode === "sync" || !inputVal) return;
+      const rawVal = inputVal.value.trim();
+      if (errorEl) errorEl.classList.add("hidden");
+
+      if (!rawVal) {
+        if (errorEl) {
+          errorEl.textContent = "Mohon masukkan nilai terlebih dahulu.";
+          errorEl.classList.remove("hidden");
+        }
+        return;
+      }
+
+      const res = UniversalConversionEngine.convertAll(rawVal, activeMode);
+      if (!res.success) {
+        if (errorEl) {
+          errorEl.textContent = res.error;
+          errorEl.classList.remove("hidden");
+        }
+        return;
+      }
+
+      if (resultsArea) {
+        resultsArea.innerHTML = this.renderUniversalResults(res, activeMode);
+        this.setupCopyButtons();
+      }
+    };
+
+    if (runBtn) runBtn.addEventListener("click", executeCalculation);
+    if (clearBtn && inputVal) {
+      clearBtn.addEventListener("click", () => {
+        inputVal.value = "";
+        inputVal.focus();
+        if (errorEl) errorEl.classList.add("hidden");
+      });
+    }
+    if (inputVal) {
+      inputVal.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") executeCalculation();
+      });
+      inputVal.addEventListener("input", () => {
+        if (errorEl) errorEl.classList.add("hidden");
+      });
+    }
+
+    switchMode(activeMode);
+  },
+
+  initSyncGrid() {
+    const inputDec = document.getElementById("sync-input-dec");
+    const inputBin = document.getElementById("sync-input-bin");
+    const inputOct = document.getElementById("sync-input-oct");
+    const inputHex = document.getElementById("sync-input-hex");
+    const teleBadge = document.getElementById("tele-bits-badge");
+    const teleBits = document.getElementById("sync-tele-bits");
+    const resetBtn = document.getElementById("btn-sync-reset");
+    const randBtn = document.getElementById("btn-sync-rand");
+
+    if (!inputDec || !inputBin || !inputOct || !inputHex) return;
+
+    let isUpdating = false;
+
+    const updateAllFromBigInt = (bigIntVal, sourceInputId) => {
+      if (isUpdating) return;
+      isUpdating = true;
+
+      try {
+        if (bigIntVal === null) {
+          if (sourceInputId !== "sync-input-dec") inputDec.value = "";
+          if (sourceInputId !== "sync-input-bin") inputBin.value = "";
+          if (sourceInputId !== "sync-input-oct") inputOct.value = "";
+          if (sourceInputId !== "sync-input-hex") inputHex.value = "";
+          if (teleBadge) teleBadge.textContent = "0 Bit • 0 Byte";
+          if (teleBits) teleBits.innerHTML = "";
+          return;
+        }
+
+        const decStr = bigIntVal.toString();
+        const binStr = bigIntVal.toString(2);
+        const octStr = bigIntVal.toString(8);
+        const hexStr = bigIntVal.toString(16).toUpperCase();
+
+        if (sourceInputId !== "sync-input-dec") inputDec.value = decStr;
+        if (sourceInputId !== "sync-input-bin") inputBin.value = binStr;
+        if (sourceInputId !== "sync-input-oct") inputOct.value = octStr;
+        if (sourceInputId !== "sync-input-hex") inputHex.value = hexStr;
+
+        const bitLen = binStr.length;
+        const bytes = Math.ceil(bitLen / 8) || 1;
+        if (teleBadge) {
+          teleBadge.textContent = `${bitLen} Bit • ${bytes} Byte (${bytes * 8}-bit slot)`;
+        }
+
+        if (teleBits) {
+          const paddedLen = Math.max(8, Math.ceil(bitLen / 8) * 8);
+          const paddedBin = binStr.padStart(paddedLen, "0");
+          teleBits.innerHTML = paddedBin
+            .split("")
+            .map(
+              (b, idx) => `
+            <div class="tele-bit ${b === "1" ? "bit-active" : "bit-inactive"}" title="Bit ${paddedLen - 1 - idx}: ${b}">
+              <span class="bit-char">${b}</span>
+              <span class="bit-pos">${paddedLen - 1 - idx}</span>
+            </div>
+          `,
+            )
+            .join("");
+        }
+      } finally {
+        isUpdating = false;
+      }
+    };
+
+    inputDec.addEventListener("input", () => {
+      const val = inputDec.value.trim();
+      if (!val) {
+        updateAllFromBigInt(null, "sync-input-dec");
+        return;
+      }
+      if (/^\d+$/.test(val)) {
+        try {
+          const b = BigInt(val);
+          if (b <= 4294967295n) updateAllFromBigInt(b, "sync-input-dec");
+        } catch (e) {}
+      }
+    });
+
+    inputBin.addEventListener("input", () => {
+      const val = inputBin.value.trim();
+      if (!val) {
+        updateAllFromBigInt(null, "sync-input-bin");
+        return;
+      }
+      if (/^[01]+$/.test(val)) {
+        try {
+          const b = BigInt("0b" + val);
+          if (b <= 4294967295n) updateAllFromBigInt(b, "sync-input-bin");
+        } catch (e) {}
+      }
+    });
+
+    inputOct.addEventListener("input", () => {
+      const val = inputOct.value.trim();
+      if (!val) {
+        updateAllFromBigInt(null, "sync-input-oct");
+        return;
+      }
+      if (/^[0-7]+$/.test(val)) {
+        try {
+          const b = BigInt("0o" + val);
+          if (b <= 4294967295n) updateAllFromBigInt(b, "sync-input-oct");
+        } catch (e) {}
+      }
+    });
+
+    inputHex.addEventListener("input", () => {
+      const val = inputHex.value.trim();
+      if (!val) {
+        updateAllFromBigInt(null, "sync-input-hex");
+        return;
+      }
+      if (/^[0-9A-Fa-f]+$/.test(val)) {
+        try {
+          const b = BigInt("0x" + val);
+          if (b <= 4294967295n) updateAllFromBigInt(b, "sync-input-hex");
+        } catch (e) {}
+      }
+    });
+
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        updateAllFromBigInt(0n, null);
+      });
+    }
+
+    if (randBtn) {
+      randBtn.addEventListener("click", () => {
+        const rand = BigInt(Math.floor(Math.random() * 1024) + 1);
+        updateAllFromBigInt(rand, null);
+      });
+    }
+
+    document.querySelectorAll(".sync-preset-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const val = BigInt(btn.dataset.val);
+        updateAllFromBigInt(val, null);
+      });
+    });
+
+    this.setupCopyButtons();
+
+    const initialDec = inputDec.value.trim();
+    if (initialDec && /^\d+$/.test(initialDec)) {
+      updateAllFromBigInt(BigInt(initialDec), null);
+    }
+  },
+
+  setupCopyButtons() {
+    document.querySelectorAll(".btn-copy-chip, .btn-copy-univ").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const textToCopy =
+          btn.dataset.copyText ||
+          (btn.dataset.target
+            ? document.getElementById(btn.dataset.target)?.value
+            : "");
+        if (textToCopy) {
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-check text-success"></i> Disalin!`;
+            setTimeout(() => {
+              btn.innerHTML = originalHtml;
+            }, 1800);
+          });
+        }
+      };
+    });
   },
 
   // ------------------------------------------

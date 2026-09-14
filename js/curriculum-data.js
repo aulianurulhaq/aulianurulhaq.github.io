@@ -26,6 +26,11 @@ const CURRICULUM_DATA = [
         icon: "book-open",
       },
       {
+        id: "w1-universal",
+        title: "Konversi Semua Bilangan",
+        icon: "arrows-rotate",
+      },
+      {
         id: "w1-simulator",
         title: "Simulator Konversi Sentral",
         icon: "microchip",

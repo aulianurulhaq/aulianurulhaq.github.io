@@ -1081,3 +1081,381 @@
   border-color: var(--amber);
   background-color: rgba(245, 158, 11, 0.05);
 }
+
+/* =========================================================
+   GAYA MODUL: KONVERSI SEMUA BASIS BILANGAN (UNIVERSAL)
+   ========================================================= */
+
+.universal-mode-card {
+  padding: 1rem;
+  background: linear-gradient(145deg, rgba(14, 20, 36, 0.8), rgba(19, 28, 49, 0.9));
+  border: 1px solid var(--border-color);
+  margin-top: 1rem;
+}
+
+.universal-tabs-wrapper {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.universal-tabs {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.univ-tab-btn {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.65rem 1.1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.univ-tab-btn:hover {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.univ-tab-btn.active {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.2), rgba(6, 182, 212, 0.15));
+  border-color: var(--cyan);
+  color: var(--text-primary);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+}
+
+.univ-tab-btn.tab-highlight {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.univ-tab-btn.tab-highlight.active {
+  border-color: var(--purple);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.15));
+}
+
+.tab-radix {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+.radix-dec {
+  background-color: rgba(2, 132, 199, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(2, 132, 199, 0.4);
+}
+
+.radix-bin {
+  background-color: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+.radix-oct {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.radix-hex {
+  background-color: rgba(236, 72, 153, 0.2);
+  color: #f472b6;
+  border: 1px solid rgba(236, 72, 153, 0.4);
+}
+
+.radix-sync {
+  background-color: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+/* Single-Base Input Card */
+.univ-input-card {
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.univ-input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.univ-main-input {
+  font-size: 1.25rem !important;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* Badges for Bases */
+.badge-dec {
+  background-color: rgba(2, 132, 199, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(2, 132, 199, 0.3);
+}
+
+.badge-bin {
+  background-color: rgba(6, 182, 212, 0.15);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.badge-oct {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-hex {
+  background-color: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+  border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.text-sky { color: #38bdf8; }
+
+.card-dec { border-top: 3px solid #38bdf8; }
+.card-bin { border-top: 3px solid #22d3ee; }
+.card-oct { border-top: 3px solid #fbbf24; }
+.card-hex { border-top: 3px solid #f472b6; }
+
+/* Derivations Section */
+.derivation-card {
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+}
+
+.derivation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.derivation-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.derivation-result-pill {
+  background-color: var(--bg-main);
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+}
+
+.sub-stage-box {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+.sub-stage-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.alt-method-box {
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px dashed rgba(56, 189, 248, 0.4);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+}
+
+/* Real-Time Sync Grid */
+.sync-intro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sync-actions-top {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sync-boxes-grid {
+  gap: 1.25rem;
+}
+
+.sync-box {
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  transition: var(--transition);
+}
+
+.sync-box:hover, .sync-box:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-md);
+}
+
+.sync-box-dec { border-top: 3px solid #38bdf8; }
+.sync-box-bin { border-top: 3px solid #22d3ee; }
+.sync-box-oct { border-top: 3px solid #fbbf24; }
+.sync-box-hex { border-top: 3px solid #f472b6; }
+
+.sync-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.sync-box-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sync-field {
+  width: 100%;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: var(--transition);
+}
+
+.sync-field:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.sync-box-footer {
+  margin-top: 0.6rem;
+}
+
+.code-prefix {
+  color: var(--cyan);
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-copy-chip {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-copy-chip:hover {
+  color: var(--text-primary);
+  border-color: var(--border-focus);
+}
+
+/* Telemetry HUD */
+.sync-telemetry {
+  background: linear-gradient(145deg, rgba(14, 20, 36, 0.95), rgba(9, 26, 51, 0.95));
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 1.25rem;
+}
+
+.sync-tele-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tele-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tele-bits-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0.5rem;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+}
+
+.tele-bit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 50px;
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  transition: var(--transition);
+}
+
+.bit-active {
+  background-color: rgba(6, 182, 212, 0.25);
+  border: 1px solid var(--cyan);
+  color: #22d3ee;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}
+
+.bit-inactive {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.bit-char {
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.bit-pos {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.sync-presets-quick {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
