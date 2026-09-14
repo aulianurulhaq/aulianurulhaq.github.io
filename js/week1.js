@@ -14,21 +14,53 @@ const BinaryCentralEngine = {
 
     switch (base) {
       case "bin":
-        if (!/^[01]+$/.test(clean)) return { valid: false, message: "Biner hanya boleh berisi angka 0 dan 1." };
-        if (clean.length > 32) return { valid: false, message: "Maksimal panjang biner adalah 32 bit." };
+        if (!/^[01]+$/.test(clean))
+          return {
+            valid: false,
+            message: "Biner hanya boleh berisi angka 0 dan 1.",
+          };
+        if (clean.length > 32)
+          return {
+            valid: false,
+            message: "Maksimal panjang biner adalah 32 bit.",
+          };
         return { valid: true, cleanValue: clean };
       case "oct":
-        if (!/^[0-7]+$/.test(clean)) return { valid: false, message: "Oktal hanya boleh berisi digit 0 sampai 7." };
-        if (parseInt(clean, 8) > 0xFFFFFFFF) return { valid: false, message: "Nilai oktal melebihi batas 32-bit." };
+        if (!/^[0-7]+$/.test(clean))
+          return {
+            valid: false,
+            message: "Oktal hanya boleh berisi digit 0 sampai 7.",
+          };
+        if (parseInt(clean, 8) > 0xffffffff)
+          return {
+            valid: false,
+            message: "Nilai oktal melebihi batas 32-bit.",
+          };
         return { valid: true, cleanValue: clean };
       case "hex":
-        if (!/^[0-9A-F]+$/.test(clean)) return { valid: false, message: "Heksadesimal hanya boleh berisi 0-9 dan A-F." };
-        if (parseInt(clean, 16) > 0xFFFFFFFF) return { valid: false, message: "Nilai heksadesimal melebihi batas 32-bit." };
+        if (!/^[0-9A-F]+$/.test(clean))
+          return {
+            valid: false,
+            message: "Heksadesimal hanya boleh berisi 0-9 dan A-F.",
+          };
+        if (parseInt(clean, 16) > 0xffffffff)
+          return {
+            valid: false,
+            message: "Nilai heksadesimal melebihi batas 32-bit.",
+          };
         return { valid: true, cleanValue: clean };
       case "dec":
-        if (!/^\d+$/.test(clean)) return { valid: false, message: "Desimal harus berupa bilangan bulat positif." };
+        if (!/^\d+$/.test(clean))
+          return {
+            valid: false,
+            message: "Desimal harus berupa bilangan bulat positif.",
+          };
         const num = BigInt(clean);
-        if (num > 4294967295n) return { valid: false, message: "Maksimal nilai desimal adalah 4.294.967.295 (32-bit)." };
+        if (num > 4294967295n)
+          return {
+            valid: false,
+            message: "Maksimal nilai desimal adalah 4.294.967.295 (32-bit).",
+          };
         return { valid: true, cleanValue: clean, num: Number(num) };
       default:
         return { valid: false, message: "Basis bilangan tidak valid." };
@@ -51,13 +83,17 @@ const BinaryCentralEngine = {
       steps.push({
         type: "direct",
         title: "Sudah dalam Basis Biner",
-        explanation: `Nilai input ${clean} sudah merupakan bilangan biner. Tidak memerlukan konversi pendahuluan.`
+        explanation: `Nilai input ${clean} sudah merupakan bilangan biner. Tidak memerlukan konversi pendahuluan.`,
       });
     } else if (fromBase === "dec") {
       let current = BigInt(clean);
       if (current === 0n) {
         binaryStr = "0";
-        steps.push({ quotient: "0", remainder: "0", expression: "0 / 2 = 0 sisa 0" });
+        steps.push({
+          quotient: "0",
+          remainder: "0",
+          expression: "0 / 2 = 0 sisa 0",
+        });
       } else {
         const divSteps = [];
         while (current > 0n) {
@@ -67,16 +103,20 @@ const BinaryCentralEngine = {
             current: current.toString(),
             quotient: next.toString(),
             remainder: rem.toString(),
-            expression: `${current} ÷ 2 = ${next} (Sisa ${rem})`
+            expression: `${current} ÷ 2 = ${next} (Sisa ${rem})`,
           });
           current = next;
         }
-        binaryStr = divSteps.map(s => s.remainder).reverse().join("");
+        binaryStr = divSteps
+          .map((s) => s.remainder)
+          .reverse()
+          .join("");
         steps.push({
           type: "division",
           title: "Metode Pembagian Bertingkat dengan 2",
-          explanation: "Bagi bilangan desimal dengan 2 secara berulang. Catat setiap sisa pembagian (0 atau 1). Hasil biner dibaca dari sisa terakhir (MSB) ke sisa pertama (LSB).",
-          rows: divSteps
+          explanation:
+            "Bagi bilangan desimal dengan 2 secara berulang. Catat setiap sisa pembagian (0 atau 1). Hasil biner dibaca dari sisa terakhir (MSB) ke sisa pertama (LSB).",
+          rows: divSteps,
         });
       }
     } else if (fromBase === "oct") {
@@ -86,12 +126,17 @@ const BinaryCentralEngine = {
         const bin3 = parseInt(char, 8).toString(2).padStart(3, "0");
         mapping.push({ digit: char, bin: bin3, val: parseInt(char, 8) });
       }
-      binaryStr = mapping.map(m => m.bin).join("").replace(/^0+(?=\d)/, "") || "0";
+      binaryStr =
+        mapping
+          .map((m) => m.bin)
+          .join("")
+          .replace(/^0+(?=\d)/, "") || "0";
       steps.push({
         type: "oct_expansion",
         title: "Ekspansi Setiap Digit Oktal ke 3-Bit Biner",
-        explanation: "Karena 8 = 2³, setiap 1 digit oktal tepat ekuivalen dengan 3 bit biner (pembobotan 4-2-1).",
-        mapping
+        explanation:
+          "Karena 8 = 2³, setiap 1 digit oktal tepat ekuivalen dengan 3 bit biner (pembobotan 4-2-1).",
+        mapping,
       });
     } else if (fromBase === "hex") {
       const mapping = [];
@@ -101,12 +146,17 @@ const BinaryCentralEngine = {
         const bin4 = decVal.toString(2).padStart(4, "0");
         mapping.push({ digit: char, dec: decVal, bin: bin4 });
       }
-      binaryStr = mapping.map(m => m.bin).join("").replace(/^0+(?=\d)/, "") || "0";
+      binaryStr =
+        mapping
+          .map((m) => m.bin)
+          .join("")
+          .replace(/^0+(?=\d)/, "") || "0";
       steps.push({
         type: "hex_expansion",
         title: "Ekspansi Setiap Digit Heksadesimal ke 4-Bit Biner",
-        explanation: "Karena 16 = 2⁴, setiap 1 digit heksadesimal tepat ekuivalen dengan 4 bit biner (pembobotan 8-4-2-1).",
-        mapping
+        explanation:
+          "Karena 16 = 2⁴, setiap 1 digit heksadesimal tepat ekuivalen dengan 4 bit biner (pembobotan 8-4-2-1).",
+        mapping,
       });
     }
 
@@ -115,7 +165,7 @@ const BinaryCentralEngine = {
       fromBase,
       inputValue: clean,
       centralBinary: binaryStr,
-      steps
+      steps,
     };
   },
 
@@ -126,7 +176,13 @@ const BinaryCentralEngine = {
     // 1. Ke Heksadesimal (Kelompok 4 bit dari kanan)
     const hexGroupLen = 4;
     const hexRemainder = cleanBin.length % hexGroupLen;
-    const hexPadded = hexRemainder === 0 ? cleanBin : cleanBin.padStart(cleanBin.length + (hexGroupLen - hexRemainder), "0");
+    const hexPadded =
+      hexRemainder === 0
+        ? cleanBin
+        : cleanBin.padStart(
+            cleanBin.length + (hexGroupLen - hexRemainder),
+            "0",
+          );
     const hexGroups = [];
     let hexResult = "";
 
@@ -137,17 +193,25 @@ const BinaryCentralEngine = {
       hexResult += hexChar;
       hexGroups.push({
         chunk,
-        bits: chunk.split("").map((b, idx) => ({ bit: b, weight: [8, 4, 2, 1][idx] })),
+        bits: chunk
+          .split("")
+          .map((b, idx) => ({ bit: b, weight: [8, 4, 2, 1][idx] })),
         decVal,
         hexChar,
-        calculation: `${chunk[0]}×8 + ${chunk[1]}×4 + ${chunk[2]}×2 + ${chunk[3]}×1 = ${decVal}`
+        calculation: `${chunk[0]}×8 + ${chunk[1]}×4 + ${chunk[2]}×2 + ${chunk[3]}×1 = ${decVal}`,
       });
     }
 
     // 2. Ke Oktal (Kelompok 3 bit dari kanan)
     const octGroupLen = 3;
     const octRemainder = cleanBin.length % octGroupLen;
-    const octPadded = octRemainder === 0 ? cleanBin : cleanBin.padStart(cleanBin.length + (octGroupLen - octRemainder), "0");
+    const octPadded =
+      octRemainder === 0
+        ? cleanBin
+        : cleanBin.padStart(
+            cleanBin.length + (octGroupLen - octRemainder),
+            "0",
+          );
     const octGroups = [];
     let octResult = "";
 
@@ -158,10 +222,12 @@ const BinaryCentralEngine = {
       octResult += octChar;
       octGroups.push({
         chunk,
-        bits: chunk.split("").map((b, idx) => ({ bit: b, weight: [4, 2, 1][idx] })),
+        bits: chunk
+          .split("")
+          .map((b, idx) => ({ bit: b, weight: [4, 2, 1][idx] })),
         decVal,
         octChar,
-        calculation: `${chunk[0]}×4 + ${chunk[1]}×2 + ${chunk[2]}×1 = ${decVal}`
+        calculation: `${chunk[0]}×4 + ${chunk[1]}×2 + ${chunk[2]}×1 = ${decVal}`,
       });
     }
 
@@ -180,7 +246,7 @@ const BinaryCentralEngine = {
         bit,
         weight: weight.toString(),
         termVal: termVal.toString(),
-        isActive: bit === "1"
+        isActive: bit === "1",
       });
     });
 
@@ -190,22 +256,26 @@ const BinaryCentralEngine = {
         paddedBinary: hexPadded,
         padAdded: hexPadded.length - cleanBin.length,
         groups: hexGroups,
-        result: hexResult.replace(/^0+(?=[1-9A-F])/, "") || "0"
+        result: hexResult.replace(/^0+(?=[1-9A-F])/, "") || "0",
       },
       toOct: {
         paddedBinary: octPadded,
         padAdded: octPadded.length - cleanBin.length,
         groups: octGroups,
-        result: octResult.replace(/^0+(?=[1-7])/, "") || "0"
+        result: octResult.replace(/^0+(?=[1-7])/, "") || "0",
       },
       toDec: {
         terms: decTerms.reverse(), // kembalikan ke urutan MSB ke LSB untuk display
-        activeTerms: decTerms.filter(t => t.isActive),
-        sumFormula: decTerms.filter(t => t.isActive).map(t => t.weight).join(" + ") || "0",
-        result: decSum.toString()
-      }
+        activeTerms: decTerms.filter((t) => t.isActive),
+        sumFormula:
+          decTerms
+            .filter((t) => t.isActive)
+            .map((t) => t.weight)
+            .join(" + ") || "0",
+        result: decSum.toString(),
+      },
     };
-  }
+  },
 };
 
 // ==========================================
@@ -219,7 +289,7 @@ const Week1Controller = {
     step1Done: false,
     score: 0,
     totalAttempted: 0,
-    streak: 0
+    streak: 0,
   },
 
   init(containerEl, submenuId = "w1-konsep") {
@@ -300,7 +370,7 @@ const Week1Controller = {
               <strong>DESIMAL</strong>
               <small>Simbol: 0 - 9</small>
             </div>
-            
+
             <div class="diag-node diag-oct">
               <span class="node-badge">Basis 8</span>
               <strong>OKTAL</strong>
@@ -418,17 +488,22 @@ const Week1Controller = {
       const oct = i < 8 ? i.toString(8) : `${Math.floor(i / 8)}${i % 8}`;
       const hex = i.toString(16).toUpperCase();
       const isLetter = i >= 10;
-      const weightDesc = bin4.split("").map((b, idx) => b === "1" ? [8, 4, 2, 1][idx] : null).filter(Boolean).join(" + ") || "0";
+      const weightDesc =
+        bin4
+          .split("")
+          .map((b, idx) => (b === "1" ? [8, 4, 2, 1][idx] : null))
+          .filter(Boolean)
+          .join(" + ") || "0";
 
       rows += `
-        <tr class="${isLetter ? 'row-letter' : ''}">
+        <tr class="${isLetter ? "row-letter" : ""}">
           <td><strong class="num-dec">${i}</strong></td>
           <td><code class="code-bin">${bin4}</code></td>
           <td><code class="code-oct-bin">${bin3}</code></td>
           <td><strong class="num-oct">${oct}</strong></td>
           <td>
-            <strong class="num-hex ${isLetter ? 'hex-special' : ''}">${hex}</strong>
-            ${isLetter ? `<small class="hex-alias">(${i})</small>` : ''}
+            <strong class="num-hex ${isLetter ? "hex-special" : ""}">${hex}</strong>
+            ${isLetter ? `<small class="hex-alias">(${i})</small>` : ""}
           </td>
           <td class="text-muted"><small>${weightDesc} = ${i}</small></td>
         </tr>
@@ -480,11 +555,11 @@ const Week1Controller = {
                 <span id="sim-input-label">Masukkan Nilai Desimal (0-9):</span>
               </label>
               <div class="input-action-wrapper">
-                <input 
-                  type="text" 
-                  id="sim-input-val" 
-                  class="text-input" 
-                  value="42" 
+                <input
+                  type="text"
+                  id="sim-input-val"
+                  class="text-input"
+                  value="42"
                   placeholder="Contoh: 42"
                   autocomplete="off"
                   spellcheck="false"
@@ -539,11 +614,11 @@ const Week1Controller = {
           <div class="form-group">
             <label class="form-label" for="vis-bin-input">Ketik Deretan Bit Biner Bebas (atau pilih panjang acak):</label>
             <div class="input-action-wrapper">
-              <input 
-                type="text" 
-                id="vis-bin-input" 
-                class="text-input font-mono" 
-                value="11010110" 
+              <input
+                type="text"
+                id="vis-bin-input"
+                class="text-input font-mono"
+                value="11010110"
                 placeholder="Ketik angka 0 dan 1..."
               >
               <button type="button" id="btn-vis-rand-8" class="btn btn-outline">Acak 8-Bit</button>
@@ -711,7 +786,9 @@ const Week1Controller = {
   // ------------------------------------------
   initSimulator() {
     let currentBase = "dec";
-    const selectorPills = document.querySelectorAll("#sim-base-selector .radio-pill");
+    const selectorPills = document.querySelectorAll(
+      "#sim-base-selector .radio-pill",
+    );
     const inputEl = document.getElementById("sim-input-val");
     const inputLabel = document.getElementById("sim-input-label");
     const errorEl = document.getElementById("sim-input-error");
@@ -722,32 +799,34 @@ const Week1Controller = {
       dec: "Masukkan Nilai Desimal (0-9):",
       bin: "Masukkan Deretan Biner (0 atau 1):",
       oct: "Masukkan Nilai Oktal (0-7):",
-      hex: "Masukkan Nilai Heksadesimal (0-9, A-F):"
+      hex: "Masukkan Nilai Heksadesimal (0-9, A-F):",
     };
 
     const basePlaceholders = {
       dec: "Contoh: 42",
       bin: "Contoh: 101010",
       oct: "Contoh: 52",
-      hex: "Contoh: 2A"
+      hex: "Contoh: 2A",
     };
 
     const updateBase = (base) => {
       currentBase = base;
-      selectorPills.forEach(p => p.classList.toggle("active", p.dataset.base === base));
+      selectorPills.forEach((p) =>
+        p.classList.toggle("active", p.dataset.base === base),
+      );
       inputLabel.textContent = baseLabels[base];
       inputEl.placeholder = basePlaceholders[base];
       errorEl.classList.add("hidden");
     };
 
-    selectorPills.forEach(pill => {
+    selectorPills.forEach((pill) => {
       pill.addEventListener("click", () => {
         updateBase(pill.dataset.base);
       });
     });
 
     // Preset chips
-    document.querySelectorAll(".preset-row .btn-chip").forEach(chip => {
+    document.querySelectorAll(".preset-row .btn-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         updateBase(chip.dataset.base);
         inputEl.value = chip.dataset.val;
@@ -774,7 +853,9 @@ const Week1Controller = {
       }
 
       // 2. Konversi dari Biner Sentral ke 3 sistem lainnya
-      const fromBinRes = BinaryCentralEngine.fromCentralBinary(toBinRes.centralBinary);
+      const fromBinRes = BinaryCentralEngine.fromCentralBinary(
+        toBinRes.centralBinary,
+      );
 
       // Render Hasil Lengkap
       resultsArea.innerHTML = this.renderSimulatorResults(toBinRes, fromBinRes);
@@ -815,14 +896,18 @@ const Week1Controller = {
                 </tr>
               </thead>
               <tbody>
-                ${rows.map((r, i) => `
+                ${rows
+                  .map(
+                    (r, i) => `
                   <tr>
                     <td><code>${r.current} ÷ 2</code></td>
                     <td><strong>${r.quotient}</strong></td>
-                    <td><span class="badge ${r.remainder === '1' ? 'badge-accent' : 'badge-dim'}">${r.remainder}</span></td>
-                    <td><small class="text-muted">${i === rows.length - 1 ? '↑ MSB (Bit Paling Kiri)' : (i === 0 ? 'LSB (Bit Paling Kanan)' : '↑')}</small></td>
+                    <td><span class="badge ${r.remainder === "1" ? "badge-accent" : "badge-dim"}">${r.remainder}</span></td>
+                    <td><small class="text-muted">${i === rows.length - 1 ? "↑ MSB (Bit Paling Kiri)" : i === 0 ? "LSB (Bit Paling Kanan)" : "↑"}</small></td>
                   </tr>
-                `).join("")}
+                `,
+                  )
+                  .join("")}
               </tbody>
             </table>
           </div>
@@ -837,14 +922,18 @@ const Week1Controller = {
         <div class="step-box">
           <p class="step-note"><strong>Ekspansi Langsung 3-Bit:</strong> Setiap 1 digit oktal diubah menjadi tepat 3 digit biner (bobot 4-2-1):</p>
           <div class="expansion-grid">
-            ${mapping.map(m => `
+            ${mapping
+              .map(
+                (m) => `
               <div class="expansion-card exp-oct">
                 <div class="exp-src">${m.digit}₈</div>
                 <div class="exp-arrow"><i class="fas fa-arrow-down"></i></div>
                 <div class="exp-target">${m.bin}₂</div>
                 <small class="exp-desc">(Nilai: ${m.val})</small>
               </div>
-            `).join("")}
+            `,
+              )
+              .join("")}
           </div>
           <div class="result-highlight-pill mt-3">
             Gabungkan semua bit: <strong class="font-mono text-cyan">${toBin.centralBinary}</strong>₂
@@ -857,14 +946,18 @@ const Week1Controller = {
         <div class="step-box">
           <p class="step-note"><strong>Ekspansi Langsung 4-Bit:</strong> Setiap 1 digit heksadesimal diubah menjadi tepat 4 digit biner (bobot 8-4-2-1):</p>
           <div class="expansion-grid">
-            ${mapping.map(m => `
+            ${mapping
+              .map(
+                (m) => `
               <div class="expansion-card exp-hex">
                 <div class="exp-src">${m.digit}₁₆</div>
                 <div class="exp-arrow"><i class="fas fa-arrow-down"></i></div>
                 <div class="exp-target">${m.bin}₂</div>
                 <small class="exp-desc">(${m.digit} = ${m.dec}₁₀)</small>
               </div>
-            `).join("")}
+            `,
+              )
+              .join("")}
           </div>
           <div class="result-highlight-pill mt-3">
             Gabungkan semua bit: <strong class="font-mono text-cyan">${toBin.centralBinary}</strong>₂
@@ -890,12 +983,17 @@ const Week1Controller = {
           <h4>Nilai Biner Ekuivalen:</h4>
         </div>
         <div class="hub-binary-display">
-          ${toBin.centralBinary.split("").map((b, idx) => `
-            <div class="bit-cell ${b === '1' ? 'bit-on' : 'bit-off'}">
+          ${toBin.centralBinary
+            .split("")
+            .map(
+              (b, idx) => `
+            <div class="bit-cell ${b === "1" ? "bit-on" : "bit-off"}">
               <span class="bit-val">${b}</span>
               <span class="bit-idx">2<sup>${toBin.centralBinary.length - 1 - idx}</sup></span>
             </div>
-          `).join("")}
+          `,
+            )
+            .join("")}
         </div>
         <div class="hub-footer">
           <span>Panjang Bit: <strong>${toBin.centralBinary.length} bit</strong></span>
@@ -920,18 +1018,22 @@ const Week1Controller = {
           </div>
           <p class="conv-desc">
             Biner dibagi per 4 bit dari kanan.
-            ${fromBin.toHex.padAdded > 0 ? `<br><span class="text-warning"><i class="fas fa-info-circle"></i> Ditambah ${fromBin.toHex.padAdded} nol di kiri agar pas 4-bit.</span>` : ''}
+            ${fromBin.toHex.padAdded > 0 ? `<br><span class="text-warning"><i class="fas fa-info-circle"></i> Ditambah ${fromBin.toHex.padAdded} nol di kiri agar pas 4-bit.</span>` : ""}
           </p>
 
           <div class="grouping-boxes">
-            ${fromBin.toHex.groups.map(g => `
+            ${fromBin.toHex.groups
+              .map(
+                (g) => `
               <div class="group-box group-hex">
                 <div class="group-binary font-mono">${g.chunk}</div>
                 <div class="group-weights">8 4 2 1</div>
                 <div class="group-calc"><small>${g.calculation}</small></div>
                 <div class="group-result-digit font-mono">${g.hexChar}</div>
               </div>
-            `).join("")}
+            `,
+              )
+              .join("")}
           </div>
 
           <div class="final-result-box mt-3">
@@ -948,18 +1050,22 @@ const Week1Controller = {
           </div>
           <p class="conv-desc">
             Biner dibagi per 3 bit dari kanan.
-            ${fromBin.toOct.padAdded > 0 ? `<br><span class="text-warning"><i class="fas fa-info-circle"></i> Ditambah ${fromBin.toOct.padAdded} nol di kiri agar pas 3-bit.</span>` : ''}
+            ${fromBin.toOct.padAdded > 0 ? `<br><span class="text-warning"><i class="fas fa-info-circle"></i> Ditambah ${fromBin.toOct.padAdded} nol di kiri agar pas 3-bit.</span>` : ""}
           </p>
 
           <div class="grouping-boxes">
-            ${fromBin.toOct.groups.map(g => `
+            ${fromBin.toOct.groups
+              .map(
+                (g) => `
               <div class="group-box group-oct">
                 <div class="group-binary font-mono">${g.chunk}</div>
                 <div class="group-weights">4 2 1</div>
                 <div class="group-calc"><small>${g.calculation}</small></div>
                 <div class="group-result-digit font-mono">${g.octChar}</div>
               </div>
-            `).join("")}
+            `,
+              )
+              .join("")}
           </div>
 
           <div class="final-result-box mt-3">
@@ -977,16 +1083,21 @@ const Week1Controller = {
           <p class="conv-desc">Jumlahkan nilai 2<sup>n</sup> dari setiap bit biner yang bernilai 1.</p>
 
           <div class="weight-breakdown-list">
-            ${fromBin.toDec.terms.slice(0, 8).map(t => `
-              <div class="weight-row ${t.isActive ? 'active-weight' : 'inactive-weight'}">
+            ${fromBin.toDec.terms
+              .slice(0, 8)
+              .map(
+                (t) => `
+              <div class="weight-row ${t.isActive ? "active-weight" : "inactive-weight"}">
                 <span class="w-bit">${t.bit}</span>
                 <span class="w-op">×</span>
                 <span class="w-pow">2<sup>${t.power}</sup> (${t.weight})</span>
                 <span class="w-eq">=</span>
                 <span class="w-val">${t.termVal}</span>
               </div>
-            `).join("")}
-            ${fromBin.toDec.terms.length > 8 ? `<div class="text-muted text-center"><small>+ ${fromBin.toDec.terms.length - 8} suku lainnya...</small></div>` : ''}
+            `,
+              )
+              .join("")}
+            ${fromBin.toDec.terms.length > 8 ? `<div class="text-muted text-center"><small>+ ${fromBin.toDec.terms.length - 8} suku lainnya...</small></div>` : ""}
           </div>
 
           <div class="final-result-box mt-3">
@@ -1025,33 +1136,41 @@ const Week1Controller = {
               </div>
               <span class="badge badge-outline">Hasil: <strong>${conv.toHex.result}₁₆</strong></span>
             </div>
-            
+
             <p class="text-muted mt-2">
-              Biner asli memiliki panjang <strong>${binStr.length} bit</strong>. 
+              Biner asli memiliki panjang <strong>${binStr.length} bit</strong>.
               ${conv.toHex.padAdded > 0 ? `Karena ${binStr.length} bukan kelipatan 4, ditambahkan <strong>${conv.toHex.padAdded} bit 0 (warna abu-abu garis putus-putus)</strong> di sebelah kiri (MSB).` : `Panjang bit pas kelipatan 4, tidak perlu nol penyeimbang.`}
             </p>
 
             <div class="visual-nibbles-container mt-3">
-              ${conv.toHex.groups.map((g, grpIdx) => `
+              ${conv.toHex.groups
+                .map(
+                  (g, grpIdx) => `
                 <div class="visual-group-card v-hex">
                   <div class="v-group-label">Kelompok ${conv.toHex.groups.length - grpIdx}</div>
                   <div class="v-bits-row">
-                    ${g.chunk.split("").map((b, bIdx) => {
-                      const isPadding = (grpIdx === 0 && bIdx < conv.toHex.padAdded);
-                      return `
-                        <div class="v-bit-item ${isPadding ? 'v-padding-bit' : (b === '1' ? 'v-bit-1' : 'v-bit-0')}">
+                    ${g.chunk
+                      .split("")
+                      .map((b, bIdx) => {
+                        const isPadding =
+                          grpIdx === 0 && bIdx < conv.toHex.padAdded;
+                        return `
+                        <div class="v-bit-item ${isPadding ? "v-padding-bit" : b === "1" ? "v-bit-1" : "v-bit-0"}">
                           <span class="v-bit-num">${b}</span>
                           <span class="v-bit-weight">${[8, 4, 2, 1][bIdx]}</span>
-                          ${isPadding ? '<span class="v-pad-tag">pad</span>' : ''}
+                          ${isPadding ? '<span class="v-pad-tag">pad</span>' : ""}
                         </div>
                       `;
-                    }).join("")}
+                      })
+                      .join("")}
                   </div>
                   <div class="v-bracket"><i class="fas fa-chevron-down"></i></div>
                   <div class="v-digit-output font-mono">${g.hexChar}</div>
                   <small class="text-muted">${g.calculation}</small>
                 </div>
-              `).join("")}
+              `,
+                )
+                .join("")}
             </div>
           </div>
         `;
@@ -1069,31 +1188,39 @@ const Week1Controller = {
             </div>
 
             <p class="text-muted mt-2">
-              Biner asli memiliki panjang <strong>${binStr.length} bit</strong>. 
+              Biner asli memiliki panjang <strong>${binStr.length} bit</strong>.
               ${conv.toOct.padAdded > 0 ? `Karena ${binStr.length} bukan kelipatan 3, ditambahkan <strong>${conv.toOct.padAdded} bit 0 (warna abu-abu garis putus-putus)</strong> di sebelah kiri (MSB).` : `Panjang bit pas kelipatan 3, tidak perlu nol penyeimbang.`}
             </p>
 
             <div class="visual-nibbles-container mt-3">
-              ${conv.toOct.groups.map((g, grpIdx) => `
+              ${conv.toOct.groups
+                .map(
+                  (g, grpIdx) => `
                 <div class="visual-group-card v-oct">
                   <div class="v-group-label">Kelompok ${conv.toOct.groups.length - grpIdx}</div>
                   <div class="v-bits-row">
-                    ${g.chunk.split("").map((b, bIdx) => {
-                      const isPadding = (grpIdx === 0 && bIdx < conv.toOct.padAdded);
-                      return `
-                        <div class="v-bit-item ${isPadding ? 'v-padding-bit' : (b === '1' ? 'v-bit-1' : 'v-bit-0')}">
+                    ${g.chunk
+                      .split("")
+                      .map((b, bIdx) => {
+                        const isPadding =
+                          grpIdx === 0 && bIdx < conv.toOct.padAdded;
+                        return `
+                        <div class="v-bit-item ${isPadding ? "v-padding-bit" : b === "1" ? "v-bit-1" : "v-bit-0"}">
                           <span class="v-bit-num">${b}</span>
                           <span class="v-bit-weight">${[4, 2, 1][bIdx]}</span>
-                          ${isPadding ? '<span class="v-pad-tag">pad</span>' : ''}
+                          ${isPadding ? '<span class="v-pad-tag">pad</span>' : ""}
                         </div>
                       `;
-                    }).join("")}
+                      })
+                      .join("")}
                   </div>
                   <div class="v-bracket"><i class="fas fa-chevron-down"></i></div>
                   <div class="v-digit-output font-mono">${g.octChar}</div>
                   <small class="text-muted">${g.calculation}</small>
                 </div>
-              `).join("")}
+              `,
+                )
+                .join("")}
             </div>
           </div>
         `;
@@ -1103,9 +1230,11 @@ const Week1Controller = {
     };
 
     // Mode tabs
-    document.querySelectorAll(".view-mode-tabs .tab-btn").forEach(btn => {
+    document.querySelectorAll(".view-mode-tabs .tab-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".view-mode-tabs .tab-btn").forEach(b => b.classList.remove("active"));
+        document
+          .querySelectorAll(".view-mode-tabs .tab-btn")
+          .forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         currentMode = btn.dataset.mode;
         updateDisplay();
@@ -1153,13 +1282,14 @@ const Week1Controller = {
 
     const updateSwitcherUI = () => {
       // 1. Render switches
-      switchesContainer.innerHTML = this.currentSwitchBits.map((bit, idx) => {
-        const power = this.currentSwitchBits.length - 1 - idx;
-        const weight = 2 ** power;
-        const isOn = bit === 1;
+      switchesContainer.innerHTML = this.currentSwitchBits
+        .map((bit, idx) => {
+          const power = this.currentSwitchBits.length - 1 - idx;
+          const weight = 2 ** power;
+          const isOn = bit === 1;
 
-        return `
-          <div class="digital-switch ${isOn ? 'switch-on' : 'switch-off'}" data-index="${idx}">
+          return `
+          <div class="digital-switch ${isOn ? "switch-on" : "switch-off"}" data-index="${idx}">
             <div class="switch-led"></div>
             <div class="switch-weight">2<sup>${power}</sup></div>
             <div class="switch-weight-dec">${weight}</div>
@@ -1169,7 +1299,8 @@ const Week1Controller = {
             <span class="switch-bit-name">Bit ${power}</span>
           </div>
         `;
-      }).join("");
+        })
+        .join("");
 
       // 2. Hitung nilai
       const binStr = this.currentSwitchBits.join("");
@@ -1177,13 +1308,17 @@ const Week1Controller = {
 
       // 3. Update HUD
       hudBin.textContent = `${binStr.slice(0, 4)} ${binStr.slice(4)}`;
-      hudSubBin.textContent = `${this.currentSwitchBits.filter(b => b === 1).length} bit ON (Logika 1)`;
+      hudSubBin.textContent = `${this.currentSwitchBits.filter((b) => b === 1).length} bit ON (Logika 1)`;
 
       hudHex.textContent = conv.toHex.result;
-      hudSubHex.textContent = conv.toHex.groups.map(g => `[${g.chunk}]=${g.hexChar}`).join(" ");
+      hudSubHex.textContent = conv.toHex.groups
+        .map((g) => `[${g.chunk}]=${g.hexChar}`)
+        .join(" ");
 
       hudOct.textContent = conv.toOct.result;
-      hudSubOct.textContent = conv.toOct.groups.map(g => `[${g.chunk}]=${g.octChar}`).join(" ");
+      hudSubOct.textContent = conv.toOct.groups
+        .map((g) => `[${g.chunk}]=${g.octChar}`)
+        .join(" ");
 
       hudDec.textContent = conv.toDec.result;
       hudSubDec.textContent = `${conv.toDec.sumFormula} = ${conv.toDec.result}`;
@@ -1192,27 +1327,33 @@ const Week1Controller = {
       breakdownCard.innerHTML = `
         <h4 class="card-title"><i class="fas fa-chart-pie"></i> Rincian Pembobotan Posisi Aktif</h4>
         <div class="active-bits-strip mt-3">
-          ${this.currentSwitchBits.map((b, idx) => {
-            const pow = this.currentSwitchBits.length - 1 - idx;
-            const w = 2 ** pow;
-            return `
-              <div class="strip-item ${b === 1 ? 'strip-active' : 'strip-inactive'}">
+          ${this.currentSwitchBits
+            .map((b, idx) => {
+              const pow = this.currentSwitchBits.length - 1 - idx;
+              const w = 2 ** pow;
+              return `
+              <div class="strip-item ${b === 1 ? "strip-active" : "strip-inactive"}">
                 <span class="strip-val">${b}</span>
-                <small class="strip-w">${b === 1 ? `+${w}` : '0'}</small>
+                <small class="strip-w">${b === 1 ? `+${w}` : "0"}</small>
               </div>
             `;
-          }).join("")}
+            })
+            .join("")}
         </div>
         <div class="equation-box mt-3 font-mono">
-          Desimal = (${this.currentSwitchBits.map((b, idx) => {
-            const pow = this.currentSwitchBits.length - 1 - idx;
-            return b === 1 ? `1×2<sup>${pow}</sup>` : `0`;
-          }).join(" + ")}) = <span class="text-cyan font-bold">${conv.toDec.result}₁₀</span>
+          Desimal = (${this.currentSwitchBits
+            .map((b, idx) => {
+              const pow = this.currentSwitchBits.length - 1 - idx;
+              return b === 1 ? `1×2<sup>${pow}</sup>` : `0`;
+            })
+            .join(
+              " + ",
+            )}) = <span class="text-cyan font-bold">${conv.toDec.result}₁₀</span>
         </div>
       `;
 
       // Event listener per switch
-      document.querySelectorAll(".digital-switch").forEach(sw => {
+      document.querySelectorAll(".digital-switch").forEach((sw) => {
         sw.addEventListener("click", () => {
           const i = parseInt(sw.dataset.index);
           this.currentSwitchBits[i] = this.currentSwitchBits[i] === 1 ? 0 : 1;
@@ -1233,12 +1374,16 @@ const Week1Controller = {
     });
 
     document.getElementById("btn-sw-invert").addEventListener("click", () => {
-      this.currentSwitchBits = this.currentSwitchBits.map(b => b === 1 ? 0 : 1);
+      this.currentSwitchBits = this.currentSwitchBits.map((b) =>
+        b === 1 ? 0 : 1,
+      );
       updateSwitcherUI();
     });
 
     document.getElementById("btn-sw-random").addEventListener("click", () => {
-      this.currentSwitchBits = Array.from({ length: 8 }, () => Math.random() > 0.5 ? 1 : 0);
+      this.currentSwitchBits = Array.from({ length: 8 }, () =>
+        Math.random() > 0.5 ? 1 : 0,
+      );
       updateSwitcherUI();
     });
 
@@ -1253,7 +1398,13 @@ const Week1Controller = {
   },
 
   generateNewQuizQuestion() {
-    const types = ["dec-to-hex", "oct-to-hex", "hex-to-oct", "dec-to-oct", "bin-to-hex"];
+    const types = [
+      "dec-to-hex",
+      "oct-to-hex",
+      "hex-to-oct",
+      "dec-to-oct",
+      "bin-to-hex",
+    ];
     const chosenType = types[Math.floor(Math.random() * types.length)];
     const val = Math.floor(Math.random() * 200) + 10; // Nilai 10 - 210
 
@@ -1272,7 +1423,8 @@ const Week1Controller = {
           correctBin: binStr,
           correctAnswer: conv.toHex.result,
           hintStep1: `Bagi ${val} dengan 2 bertingkat atau gunakan pembobotan pangkat 2.`,
-          hintStep2: "Kelompokkan biner menjadi 4-bit dari kanan (8-4-2-1) dan ubah ke simbol 0-9 atau A-F."
+          hintStep2:
+            "Kelompokkan biner menjadi 4-bit dari kanan (8-4-2-1) dan ubah ke simbol 0-9 atau A-F.",
         };
         break;
       case "oct-to-hex":
@@ -1284,8 +1436,10 @@ const Week1Controller = {
           valStr: val.toString(8),
           correctBin: binStr,
           correctAnswer: conv.toHex.result,
-          hintStep1: "Ubah setiap digit oktal menjadi tepat 3 bit biner (4-2-1).",
-          hintStep2: "Kelompokkan ulang biner tadi menjadi 4 bit dari kanan untuk ke heksadesimal."
+          hintStep1:
+            "Ubah setiap digit oktal menjadi tepat 3 bit biner (4-2-1).",
+          hintStep2:
+            "Kelompokkan ulang biner tadi menjadi 4 bit dari kanan untuk ke heksadesimal.",
         };
         break;
       case "hex-to-oct":
@@ -1297,8 +1451,10 @@ const Week1Controller = {
           valStr: conv.toHex.result,
           correctBin: binStr,
           correctAnswer: conv.toOct.result,
-          hintStep1: "Ubah setiap digit heksadesimal menjadi tepat 4 bit biner (8-4-2-1).",
-          hintStep2: "Kelompokkan ulang biner tadi menjadi 3 bit dari kanan untuk ke oktal."
+          hintStep1:
+            "Ubah setiap digit heksadesimal menjadi tepat 4 bit biner (8-4-2-1).",
+          hintStep2:
+            "Kelompokkan ulang biner tadi menjadi 3 bit dari kanan untuk ke oktal.",
         };
         break;
       case "dec-to-oct":
@@ -1311,7 +1467,8 @@ const Week1Controller = {
           correctBin: binStr,
           correctAnswer: conv.toOct.result,
           hintStep1: `Ubah desimal ${val} ke biner terlebih dahulu.`,
-          hintStep2: "Kelompokkan biner menjadi 3 bit dari kanan untuk membaca angka oktal."
+          hintStep2:
+            "Kelompokkan biner menjadi 3 bit dari kanan untuk membaca angka oktal.",
         };
         break;
       default:
@@ -1324,7 +1481,7 @@ const Week1Controller = {
           correctBin: binStr,
           correctAnswer: conv.toHex.result,
           hintStep1: "Nilai sudah biner. Salin deretan biner.",
-          hintStep2: "Kelompokkan per 4-bit dari kanan."
+          hintStep2: "Kelompokkan per 4-bit dari kanan.",
         };
     }
 
@@ -1357,10 +1514,10 @@ const Week1Controller = {
           </div>
           <p class="text-muted"><small>${q.hintStep1}</small></p>
           <div class="q-input-row mt-2">
-            <input 
-              type="text" 
-              id="q-ans-bin" 
-              class="text-input font-mono" 
+            <input
+              type="text"
+              id="q-ans-bin"
+              class="text-input font-mono"
               placeholder="Ketik biner perantara (contoh: 101011)..."
               autocomplete="off"
             >
@@ -1379,10 +1536,10 @@ const Week1Controller = {
           </div>
           <p class="text-muted"><small>${q.hintStep2}</small></p>
           <div class="q-input-row mt-2">
-            <input 
-              type="text" 
-              id="q-ans-final" 
-              class="text-input font-mono" 
+            <input
+              type="text"
+              id="q-ans-final"
+              class="text-input font-mono"
               placeholder="Ketik hasil akhir dalam ${q.toName.toLowerCase()}..."
               disabled
               autocomplete="off"
@@ -1439,7 +1596,10 @@ const Week1Controller = {
     });
 
     btnStep2.addEventListener("click", () => {
-      const userAns = inputStep2.value.trim().toUpperCase().replace(/^0+(?=\w)/, "");
+      const userAns = inputStep2.value
+        .trim()
+        .toUpperCase()
+        .replace(/^0+(?=\w)/, "");
       const targetAns = q.correctAnswer.toUpperCase().replace(/^0+(?=\w)/, "");
 
       this.quizState.totalAttempted++;
@@ -1461,15 +1621,20 @@ const Week1Controller = {
       this.showQuizExplanation();
     });
 
-    document.getElementById("btn-new-question").addEventListener("click", () => {
-      this.generateNewQuizQuestion();
-    });
+    document
+      .getElementById("btn-new-question")
+      .addEventListener("click", () => {
+        this.generateNewQuizQuestion();
+      });
   },
 
   updateQuizStats() {
-    document.getElementById("quiz-score-val").textContent = this.quizState.score;
-    document.getElementById("quiz-total-val").textContent = this.quizState.totalAttempted;
-    document.getElementById("quiz-streak-val").textContent = `🔥 ${this.quizState.streak}`;
+    document.getElementById("quiz-score-val").textContent =
+      this.quizState.score;
+    document.getElementById("quiz-total-val").textContent =
+      this.quizState.totalAttempted;
+    document.getElementById("quiz-streak-val").textContent =
+      `🔥 ${this.quizState.streak}`;
   },
 
   showQuizExplanation() {
@@ -1493,12 +1658,12 @@ const Week1Controller = {
           </li>
           <li>
             <strong>Distribusi ke ${q.toName}:</strong>
-            ${q.toBase === 'hex' ? `Biner dikelompokkan 4-bit: <code>${fromBin.toHex.groups.map(g => `[${g.chunk}]`).join(" ")}</code> &rArr; <strong>${fromBin.toHex.result}₁₆</strong>` : ''}
-            ${q.toBase === 'oct' ? `Biner dikelompokkan 3-bit: <code>${fromBin.toOct.groups.map(g => `[${g.chunk}]`).join(" ")}</code> &rArr; <strong>${fromBin.toOct.result}₈</strong>` : ''}
-            ${q.toBase === 'dec' ? `Penjumlahan bobot aktif: ${fromBin.toDec.sumFormula} &rArr; <strong>${fromBin.toDec.result}₁₀</strong>` : ''}
+            ${q.toBase === "hex" ? `Biner dikelompokkan 4-bit: <code>${fromBin.toHex.groups.map((g) => `[${g.chunk}]`).join(" ")}</code> &rArr; <strong>${fromBin.toHex.result}₁₆</strong>` : ""}
+            ${q.toBase === "oct" ? `Biner dikelompokkan 3-bit: <code>${fromBin.toOct.groups.map((g) => `[${g.chunk}]`).join(" ")}</code> &rArr; <strong>${fromBin.toOct.result}₈</strong>` : ""}
+            ${q.toBase === "dec" ? `Penjumlahan bobot aktif: ${fromBin.toDec.sumFormula} &rArr; <strong>${fromBin.toDec.result}₁₀</strong>` : ""}
           </li>
         </ol>
       </div>
     `;
-  }
+  },
 };
