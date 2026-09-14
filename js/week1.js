@@ -2,7 +2,6 @@
  * Modul Interaktif Minggu 1: Sistem Bilangan & Konversi Biner Sentral
  * Mengimplementasikan mesin konversi dengan metode Biner sebagai titik temu sentral.
  */
-
 // ==========================================
 // 1. ENGINE KONVERSI BINER SENTRAL
 // ==========================================
@@ -289,33 +288,57 @@ const UniversalConversionEngine = {
     switch (base) {
       case "dec":
         if (!/^\d+$/.test(clean))
-          return { valid: false, message: "Desimal hanya boleh berisi digit 0-9." };
+          return {
+            valid: false,
+            message: "Desimal hanya boleh berisi digit 0-9.",
+          };
         const dNum = BigInt(clean);
         if (dNum > 4294967295n)
-          return { valid: false, message: "Maksimal desimal adalah 4.294.967.295 (32-bit)." };
+          return {
+            valid: false,
+            message: "Maksimal desimal adalah 4.294.967.295 (32-bit).",
+          };
         return { valid: true, cleanValue: clean, bigInt: dNum };
 
       case "bin":
         if (!/^[01]+$/.test(clean))
-          return { valid: false, message: "Biner hanya boleh berisi digit 0 dan 1." };
+          return {
+            valid: false,
+            message: "Biner hanya boleh berisi digit 0 dan 1.",
+          };
         if (clean.length > 32)
-          return { valid: false, message: "Maksimal panjang biner adalah 32 bit." };
+          return {
+            valid: false,
+            message: "Maksimal panjang biner adalah 32 bit.",
+          };
         return { valid: true, cleanValue: clean, bigInt: BigInt("0b" + clean) };
 
       case "oct":
         if (!/^[0-7]+$/.test(clean))
-          return { valid: false, message: "Oktal hanya boleh berisi digit 0 sampai 7." };
+          return {
+            valid: false,
+            message: "Oktal hanya boleh berisi digit 0 sampai 7.",
+          };
         const oDec = BigInt("0o" + clean);
         if (oDec > 4294967295n)
-          return { valid: false, message: "Nilai oktal melebihi batas 32-bit." };
+          return {
+            valid: false,
+            message: "Nilai oktal melebihi batas 32-bit.",
+          };
         return { valid: true, cleanValue: clean, bigInt: oDec };
 
       case "hex":
         if (!/^[0-9A-F]+$/.test(clean))
-          return { valid: false, message: "Heksadesimal hanya boleh berisi digit 0-9 dan huruf A-F." };
+          return {
+            valid: false,
+            message: "Heksadesimal hanya boleh berisi digit 0-9 dan huruf A-F.",
+          };
         const hDec = BigInt("0x" + clean);
         if (hDec > 4294967295n)
-          return { valid: false, message: "Nilai heksadesimal melebihi batas 32-bit." };
+          return {
+            valid: false,
+            message: "Nilai heksadesimal melebihi batas 32-bit.",
+          };
         return { valid: true, cleanValue: clean, bigInt: hDec };
 
       default:
@@ -406,7 +429,10 @@ const UniversalConversionEngine = {
       });
     });
     const combinedBin =
-      mappings.map((m) => m.bin).join("").replace(/^0+(?=\d)/, "") || "0";
+      mappings
+        .map((m) => m.bin)
+        .join("")
+        .replace(/^0+(?=\d)/, "") || "0";
     return {
       bitsPerDigit,
       mappings,
@@ -491,7 +517,8 @@ const UniversalConversionEngine = {
         altBinary: this.getGroupingSteps(binStr, "oct"),
       };
       results.steps.toHex = {
-        title: "Desimal ke Heksadesimal (Metode Pembagian Bertingkat dengan 16)",
+        title:
+          "Desimal ke Heksadesimal (Metode Pembagian Bertingkat dengan 16)",
         radix: 16,
         rows: this.getDivisionSteps(decBig, 16),
         result: hexStr,
@@ -1004,13 +1031,43 @@ const Week1Controller = {
 
   renderUniversalResults(results, fromBase) {
     const baseMeta = {
-      dec: { name: "Desimal", radix: 10, symbol: "₁₀", color: "text-sky", badgeClass: "badge-dec", note: "Basis 10 (Sistem Manusia)" },
-      bin: { name: "Biner", radix: 2, symbol: "₂", color: "text-cyan", badgeClass: "badge-bin", note: "Basis 2 (Sirkuit Digital)" },
-      oct: { name: "Oktal", radix: 8, symbol: "₈", color: "text-amber", badgeClass: "badge-oct", note: "Basis 8 (Kelompok 3-Bit)" },
-      hex: { name: "Heksadesimal", radix: 16, symbol: "₁₆", color: "text-magenta", badgeClass: "badge-hex", note: "Basis 16 (Kelompok 4-Bit)" },
+      dec: {
+        name: "Desimal",
+        radix: 10,
+        symbol: "₁₀",
+        color: "text-sky",
+        badgeClass: "badge-dec",
+        note: "Basis 10 (Sistem Manusia)",
+      },
+      bin: {
+        name: "Biner",
+        radix: 2,
+        symbol: "₂",
+        color: "text-cyan",
+        badgeClass: "badge-bin",
+        note: "Basis 2 (Sirkuit Digital)",
+      },
+      oct: {
+        name: "Oktal",
+        radix: 8,
+        symbol: "₈",
+        color: "text-amber",
+        badgeClass: "badge-oct",
+        note: "Basis 8 (Kelompok 3-Bit)",
+      },
+      hex: {
+        name: "Heksadesimal",
+        radix: 16,
+        symbol: "₁₆",
+        color: "text-magenta",
+        badgeClass: "badge-hex",
+        note: "Basis 16 (Kelompok 4-Bit)",
+      },
     };
 
-    const targetBases = ["dec", "bin", "oct", "hex"].filter((b) => b !== fromBase);
+    const targetBases = ["dec", "bin", "oct", "hex"].filter(
+      (b) => b !== fromBase,
+    );
 
     // 1. Kartu Ringkasan Hasil (3 Target Cards)
     const cardsHtml = targetBases
@@ -1057,7 +1114,11 @@ const Week1Controller = {
 
         let detailHtml = "";
         if (step.method === "division") {
-          detailHtml = this.renderDivisionTable(step.rows, step.radix, step.result);
+          detailHtml = this.renderDivisionTable(
+            step.rows,
+            step.radix,
+            step.result,
+          );
           if (step.altBinary) {
             detailHtml += `
             <div class="alt-method-box mt-4">
@@ -1070,13 +1131,31 @@ const Week1Controller = {
           `;
           }
         } else if (step.method === "weight") {
-          detailHtml = this.renderWeightTable(step.weightData, step.radix, step.result);
+          detailHtml = this.renderWeightTable(
+            step.weightData,
+            step.radix,
+            step.result,
+          );
         } else if (step.method === "expansion") {
-          detailHtml = this.renderExpansionGrid(step.expansionData, step.expansionData.bitsPerDigit, step.result);
+          detailHtml = this.renderExpansionGrid(
+            step.expansionData,
+            step.expansionData.bitsPerDigit,
+            step.result,
+          );
         } else if (step.method === "grouping") {
-          detailHtml = this.renderGroupingGrid(step.groupData, targetBaseKey, step.result);
+          detailHtml = this.renderGroupingGrid(
+            step.groupData,
+            targetBaseKey,
+            step.result,
+          );
         } else if (step.method === "bridge") {
-          detailHtml = this.renderBridgeSteps(step.stepA, step.stepB, step.result, fromBase, targetBaseKey);
+          detailHtml = this.renderBridgeSteps(
+            step.stepA,
+            step.stepB,
+            step.result,
+            fromBase,
+            targetBaseKey,
+          );
         }
 
         return `
@@ -1584,7 +1663,8 @@ const Week1Controller = {
         name: "Biner",
         radix: "2",
         heading: "Masukkan Deretan Bit Biner (Basis 2):",
-        chars: "Karakter valid: <code>0</code> dan <code>1</code> (Maks 32-bit)",
+        chars:
+          "Karakter valid: <code>0</code> dan <code>1</code> (Maks 32-bit)",
         placeholder: "Contoh: 101010, 11111111",
         defaultVal: "101010",
         presets: ["101010", "111101", "11111111", "100000000", "11010110"],
@@ -1593,7 +1673,8 @@ const Week1Controller = {
         name: "Oktal",
         radix: "8",
         heading: "Masukkan Bilangan Oktal (Basis 8):",
-        chars: "Karakter valid: <code>0-7</code> (Digit 8 & 9 tidak diperbolehkan)",
+        chars:
+          "Karakter valid: <code>0-7</code> (Digit 8 & 9 tidak diperbolehkan)",
         placeholder: "Contoh: 52, 77, 377",
         defaultVal: "52",
         presets: ["52", "75", "175", "377", "2000", "7777"],
@@ -1602,7 +1683,8 @@ const Week1Controller = {
         name: "Heksadesimal",
         radix: "16",
         heading: "Masukkan Bilangan Heksadesimal (Basis 16):",
-        chars: "Karakter valid: <code>0-9</code> dan <code>A-F</code> (Huruf kapital/kecil)",
+        chars:
+          "Karakter valid: <code>0-9</code> dan <code>A-F</code> (Huruf kapital/kecil)",
         placeholder: "Contoh: 2A, FF, 1A3",
         defaultVal: "2A",
         presets: ["2A", "4B", "7F", "FF", "1A3", "3E8", "FFFF"],
@@ -1645,7 +1727,8 @@ const Week1Controller = {
         if (syncPanel) syncPanel.classList.add("hidden");
         if (singlePanel) singlePanel.classList.remove("hidden");
         const cfg = modeConfig[mode];
-        if (activeBadge) activeBadge.textContent = `Basis ${cfg.name} (${cfg.radix})`;
+        if (activeBadge)
+          activeBadge.textContent = `Basis ${cfg.name} (${cfg.radix})`;
         if (inputHeading) inputHeading.textContent = cfg.heading;
         if (validChars) validChars.innerHTML = cfg.chars;
         if (inputVal) {
@@ -1860,25 +1943,27 @@ const Week1Controller = {
   },
 
   setupCopyButtons() {
-    document.querySelectorAll(".btn-copy-chip, .btn-copy-univ").forEach((btn) => {
-      btn.onclick = (e) => {
-        e.stopPropagation();
-        const textToCopy =
-          btn.dataset.copyText ||
-          (btn.dataset.target
-            ? document.getElementById(btn.dataset.target)?.value
-            : "");
-        if (textToCopy) {
-          navigator.clipboard.writeText(textToCopy).then(() => {
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = `<i class="fas fa-check text-success"></i> Disalin!`;
-            setTimeout(() => {
-              btn.innerHTML = originalHtml;
-            }, 1800);
-          });
-        }
-      };
-    });
+    document
+      .querySelectorAll(".btn-copy-chip, .btn-copy-univ")
+      .forEach((btn) => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const textToCopy =
+            btn.dataset.copyText ||
+            (btn.dataset.target
+              ? document.getElementById(btn.dataset.target)?.value
+              : "");
+          if (textToCopy) {
+            navigator.clipboard.writeText(textToCopy).then(() => {
+              const originalHtml = btn.innerHTML;
+              btn.innerHTML = `<i class="fas fa-check text-success"></i> Disalin!`;
+              setTimeout(() => {
+                btn.innerHTML = originalHtml;
+              }, 1800);
+            });
+          }
+        };
+      });
   },
 
   // ------------------------------------------
